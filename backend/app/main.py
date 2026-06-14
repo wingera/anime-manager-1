@@ -8,6 +8,7 @@ from app.db import models as _models  # noqa: F401
 from app.db.database import Base, engine
 from app.routers.health import router as health_router
 from app.routers.settings import router as settings_router
+from app.routers.sources import router as sources_router
 
 settings = get_settings()
 
@@ -21,3 +22,4 @@ async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
 app = FastAPI(title=settings.app_name, lifespan=lifespan)
 app.include_router(health_router)
 app.include_router(settings_router)
+app.include_router(sources_router)

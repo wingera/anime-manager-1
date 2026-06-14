@@ -13,6 +13,11 @@ const router = createRouter({
       path: '/settings',
       name: 'settings',
       component: () => import('../pages/SettingsCenter.vue')
+    },
+    {
+      path: '/sources',
+      name: 'sources',
+      component: () => import('../pages/SourceManagement.vue')
     }
   ]
 })

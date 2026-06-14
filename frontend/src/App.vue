@@ -3,7 +3,11 @@ import { computed } from 'vue'
 import { useRoute } from 'vue-router'
 
 const route = useRoute()
-const activeMenu = computed(() => (route.path === '/settings' ? '/settings' : '/'))
+const activeMenu = computed(() => {
+  if (route.path.startsWith('/sources')) return '/sources'
+  if (route.path.startsWith('/settings')) return '/settings'
+  return '/'
+})
 </script>
 
 <template>

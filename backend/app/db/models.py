@@ -1,6 +1,6 @@
 from datetime import datetime
 
-from sqlalchemy import Boolean, DateTime, Float, Integer, String, Text, UniqueConstraint
+from sqlalchemy import Boolean, DateTime, Float, ForeignKey, Integer, String, Text, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.db.database import Base
@@ -27,6 +27,53 @@ class Source(Base):
         nullable=False,
     )
     deleted_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+
+
+class SourceSite(Base):
+    __tablename__ = "source_sites"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
+    name: Mapped[str] = mapped_column(String(120), nullable=False)
+    url: Mapped[str] = mapped_column(Text, nullable=False)
+    source_type: Mapped[str] = mapped_column(String(40), default="webpage", nullable=False)
+    enabled: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    auth_note: Mapped[str] = mapped_column(Text, default="", nullable=False)
+    fetch_interval_minutes: Mapped[int] = mapped_column(Integer, default=60, nullable=False)
+    hash_pattern: Mapped[str] = mapped_column(Text, default="", nullable=False)
+    title_cleanup_rules: Mapped[str] = mapped_column(Text, default="", nullable=False)
+    last_checked_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, nullable=False)
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime,
+        default=datetime.utcnow,
+        onupdate=datetime.utcnow,
+        nullable=False,
+    )
+
+
+class SourceItem(Base):
+    __tablename__ = "source_items"
+    __table_args__ = (UniqueConstraint("info_hash", name="uq_source_items_info_hash"),)
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
+    source_id: Mapped[int] = mapped_column(
+        ForeignKey("source_sites.id"),
+        nullable=False,
+        index=True,
+    )
+    title: Mapped[str] = mapped_column(Text, nullable=False)
+    url: Mapped[str | None] = mapped_column(Text, nullable=True)
+    info_hash: Mapped[str] = mapped_column(String(40), nullable=False, index=True)
+    magnet_uri: Mapped[str] = mapped_column(Text, nullable=False)
+    published_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    status: Mapped[str] = mapped_column(String(40), default="pending", nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, nullable=False)
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime,
+        default=datetime.utcnow,
+        onupdate=datetime.utcnow,
+        nullable=False,
+    )
 
 
 class AppSettings(Base):
