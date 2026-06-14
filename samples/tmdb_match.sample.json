@@ -1,0 +1,25 @@
+{
+  "query_title": "示例番剧",
+  "candidates": [
+    {
+      "tmdb_id": 123456,
+      "title": "示例番剧",
+      "original_title": "Sample Animation",
+      "year": 2026,
+      "season_number": 1,
+      "episode_number": 1,
+      "match_score": 91,
+      "review_required": false
+    },
+    {
+      "tmdb_id": 654321,
+      "title": "示例番剧 第二版",
+      "original_title": "Sample Animation Reboot",
+      "year": 2024,
+      "season_number": 1,
+      "episode_number": 1,
+      "match_score": 63,
+      "review_required": true
+    }
+  ]
+}

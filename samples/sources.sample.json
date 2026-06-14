@@ -1,0 +1,12 @@
+[
+  {
+    "name": "授权来源示例",
+    "source_type": "web_page",
+    "url": "https://example.com/authorized-feed",
+    "enabled": false,
+    "authorization_note": "示例：这是用户有权使用的内部测试来源。",
+    "fetch_interval_minutes": 60,
+    "hash_pattern": "[0-9a-fA-F]{40}",
+    "title_cleanup_rule": "去除方括号发布组信息"
+  }
+]

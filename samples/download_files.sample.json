@@ -1,0 +1,32 @@
+{
+  "download_task_id": 1,
+  "files": [
+    {
+      "path": "示例番剧/示例番剧 - 01.mkv",
+      "size": 734003200,
+      "progress": 0,
+      "detected_type": "main_video",
+      "season_number": 1,
+      "episode_number": 1,
+      "match_score": 92
+    },
+    {
+      "path": "示例番剧/示例番剧 - 01.ass",
+      "size": 204800,
+      "progress": 0,
+      "detected_type": "subtitle",
+      "season_number": 1,
+      "episode_number": 1,
+      "match_score": 88
+    },
+    {
+      "path": "示例番剧/说明.txt",
+      "size": 1024,
+      "progress": 0,
+      "detected_type": "ignored",
+      "season_number": null,
+      "episode_number": null,
+      "match_score": 0
+    }
+  ]
+}
