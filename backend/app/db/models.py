@@ -29,6 +29,28 @@ class Source(Base):
     deleted_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
 
 
+class AppSettings(Base):
+    __tablename__ = "app_settings"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    tmdb_api_key: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    tmdb_language: Mapped[str] = mapped_column(String(20), default="zh-CN", nullable=False)
+    tmdb_region: Mapped[str] = mapped_column(String(20), default="CN", nullable=False)
+    qbittorrent_url: Mapped[str | None] = mapped_column(Text, nullable=True)
+    qbittorrent_username: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    qbittorrent_password: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    download_dir: Mapped[str] = mapped_column(Text, default="/downloads", nullable=False)
+    media_library_dir: Mapped[str] = mapped_column(Text, default="/media", nullable=False)
+    matching_threshold: Mapped[int] = mapped_column(Integer, default=85, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, nullable=False)
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime,
+        default=datetime.utcnow,
+        onupdate=datetime.utcnow,
+        nullable=False,
+    )
+
+
 class Resource(Base):
     __tablename__ = "resources"
     __table_args__ = (UniqueConstraint("resource_hash", name="uq_resources_resource_hash"),)

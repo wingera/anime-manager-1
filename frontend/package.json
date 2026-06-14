@@ -13,12 +13,12 @@
     "@vitejs/plugin-vue": "latest",
     "element-plus": "latest",
     "pinia": "latest",
-    "typescript": "latest",
     "vite": "latest",
     "vue": "latest",
     "vue-router": "latest"
   },
   "devDependencies": {
+    "typescript": "~5.9.3",
     "vue-tsc": "latest"
   }
 }
