@@ -1,0 +1,60 @@
+export type DownloadFileType = 'video' | 'subtitle' | 'image' | 'sample' | 'document' | 'other' | 'unknown'
+
+export interface DownloadFile {
+  id: number
+  download_task_id: number
+  file_index: number
+  name: string
+  size: number
+  progress: number
+  priority: number
+  file_type: DownloadFileType
+  selected: boolean
+  analysis_score: number
+  season_number: number | null
+  episode_number: number | null
+  created_at: string
+  updated_at: string
+}
+
+export interface RenamePreview {
+  id: number
+  download_file_id: number
+  original_path: string
+  target_path: string
+  conflict: boolean
+  warning_message: string | null
+  created_at: string
+  updated_at: string
+}
+
+export interface DownloadFileListResponse {
+  message: string
+  files: DownloadFile[]
+}
+
+export interface DownloadFileMessageResponse {
+  message: string
+  file: DownloadFile
+}
+
+export interface DownloadFileUpdateRequest {
+  selected?: boolean
+  file_type?: DownloadFileType
+  season_number?: number | null
+  episode_number?: number | null
+}
+
+export interface FileAnalysisMessageResponse {
+  message: string
+  files: DownloadFile[]
+}
+
+export interface RenamePreviewListResponse {
+  message: string
+  previews: RenamePreview[]
+}
+
+export interface SimpleMessageResponse {
+  message: string
+}

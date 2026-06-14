@@ -140,3 +140,62 @@ def get_torrent_status(
         "progress": float(progress) if isinstance(progress, int | float) else 0.0,
         "error_message": str(error_message) if error_message else None,
     }
+
+
+def get_torrent_files(
+    url: str | None,
+    username: str | None,
+    password: str | None,
+    torrent_hash: str,
+) -> list[dict[str, object]]:
+    configured_url, configured_username, configured_password = _require_config(
+        url,
+        username,
+        password,
+    )
+    try:
+        with httpx.Client(timeout=10.0) as client:
+            _login(client, configured_url, configured_username, configured_password)
+            response = client.get(
+                _api_url(configured_url, "api/v2/torrents/files"),
+                params={"hash": torrent_hash},
+            )
+            response.raise_for_status()
+    except httpx.HTTPError as exc:
+        raise ValueError(QB_REQUEST_FAILED_MESSAGE) from exc
+
+    data = response.json()
+    if not isinstance(data, list):
+        return []
+    return [item for item in data if isinstance(item, dict)]
+
+
+def set_file_priority(
+    url: str | None,
+    username: str | None,
+    password: str | None,
+    torrent_hash: str,
+    file_indexes: list[int],
+    priority: int,
+) -> None:
+    if not file_indexes:
+        return
+    configured_url, configured_username, configured_password = _require_config(
+        url,
+        username,
+        password,
+    )
+    try:
+        with httpx.Client(timeout=10.0) as client:
+            _login(client, configured_url, configured_username, configured_password)
+            response = client.post(
+                _api_url(configured_url, "api/v2/torrents/filePrio"),
+                data={
+                    "hash": torrent_hash,
+                    "id": "|".join(str(index) for index in file_indexes),
+                    "priority": str(priority),
+                },
+            )
+            response.raise_for_status()
+    except httpx.HTTPError as exc:
+        raise ValueError(QB_REQUEST_FAILED_MESSAGE) from exc

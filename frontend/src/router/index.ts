@@ -28,6 +28,16 @@ const router = createRouter({
       path: '/downloads',
       name: 'downloads',
       component: () => import('../pages/DownloadQueue.vue')
+    },
+    {
+      path: '/analysis',
+      name: 'analysis',
+      component: () => import('../pages/FileAnalysis.vue')
+    },
+    {
+      path: '/preview',
+      name: 'preview',
+      component: () => import('../pages/RenamePreview.vue')
     }
   ]
 })

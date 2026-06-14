@@ -5,6 +5,8 @@ import { useRoute } from 'vue-router'
 const route = useRoute()
 const activeMenu = computed(() => {
   if (route.path.startsWith('/downloads')) return '/downloads'
+  if (route.path.startsWith('/analysis')) return '/analysis'
+  if (route.path.startsWith('/preview')) return '/preview'
   if (route.path.startsWith('/resources')) return '/resources'
   if (route.path.startsWith('/sources')) return '/sources'
   if (route.path.startsWith('/settings')) return '/settings'

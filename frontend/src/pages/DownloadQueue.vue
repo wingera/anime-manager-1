@@ -1,10 +1,12 @@
 <script setup lang="ts">
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { onMounted } from 'vue'
+import { useRouter } from 'vue-router'
 import { useDownloadsStore } from '../stores/downloads'
 import type { DownloadTask } from '../types/downloads'
 
 const downloadsStore = useDownloadsStore()
+const router = useRouter()
 
 function getErrorMessage(error: unknown, fallback: string): string {
   return error instanceof Error ? error.message : fallback
@@ -67,6 +69,14 @@ async function removeDownload(download: DownloadTask): Promise<void> {
     if (error === 'cancel' || error === 'close') return
     ElMessage.error(getErrorMessage(error, '删除下载任务记录失败'))
   }
+}
+
+function openFileAnalysis(download: DownloadTask): void {
+  void router.push({ path: '/analysis', query: { download_id: download.id } })
+}
+
+function openRenamePreview(download: DownloadTask): void {
+  void router.push({ path: '/preview', query: { download_id: download.id } })
 }
 
 onMounted(() => {
@@ -141,6 +151,12 @@ onMounted(() => {
             @click="refreshDownload(download)"
           >
             刷新
+          </el-button>
+          <el-button type="primary" plain @click="openFileAnalysis(download)">
+            文件分析
+          </el-button>
+          <el-button type="success" plain @click="openRenamePreview(download)">
+            命名预览
           </el-button>
           <el-button
             type="danger"

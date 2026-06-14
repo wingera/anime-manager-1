@@ -189,6 +189,62 @@ class DownloadTask(Base):
     )
 
 
+class DownloadFile(Base):
+    __tablename__ = "download_files"
+    __table_args__ = (
+        UniqueConstraint("download_task_id", "file_index", name="uq_download_files_task_index"),
+    )
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
+    download_task_id: Mapped[int] = mapped_column(
+        ForeignKey("download_tasks.id"),
+        nullable=False,
+        index=True,
+    )
+    file_index: Mapped[int] = mapped_column(Integer, nullable=False)
+    name: Mapped[str] = mapped_column(Text, nullable=False)
+    size: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    progress: Mapped[float] = mapped_column(Float, default=0, nullable=False)
+    priority: Mapped[int] = mapped_column(Integer, default=1, nullable=False)
+    file_type: Mapped[str] = mapped_column(String(40), default="unknown", nullable=False)
+    selected: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
+    analysis_score: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    season_number: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    episode_number: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, nullable=False)
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime,
+        default=datetime.utcnow,
+        onupdate=datetime.utcnow,
+        nullable=False,
+    )
+
+
+class RenamePreview(Base):
+    __tablename__ = "rename_previews"
+    __table_args__ = (
+        UniqueConstraint("download_file_id", name="uq_rename_previews_download_file_id"),
+    )
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
+    download_file_id: Mapped[int] = mapped_column(
+        ForeignKey("download_files.id"),
+        nullable=False,
+        index=True,
+    )
+    original_path: Mapped[str] = mapped_column(Text, nullable=False)
+    target_path: Mapped[str] = mapped_column(Text, nullable=False)
+    conflict: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    warning_message: Mapped[str | None] = mapped_column(Text, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, nullable=False)
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime,
+        default=datetime.utcnow,
+        onupdate=datetime.utcnow,
+        nullable=False,
+    )
+
+
 class MediaFile(Base):
     __tablename__ = "media_files"
 
