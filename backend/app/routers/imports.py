@@ -21,6 +21,7 @@ from app.services.import_service import (
     list_import_jobs,
     rollback_import,
 )
+from app.services.log_service import write_operation_log
 
 router = APIRouter(tags=["入库记录"])
 DbSession = Annotated[Session, Depends(get_db)]
@@ -54,6 +55,15 @@ def run_import(
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc)) from exc
     except ValueError as exc:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
+    write_operation_log(
+        db,
+        module="imports",
+        message="入库已执行",
+        detail=(
+            f"下载任务编号：{download_id}，入库任务编号：{import_job.id}，"
+            f"状态：{import_job.status}"
+        ),
+    )
     return ImportJobMessageResponse(message="入库执行完成", import_job=_job_response(import_job))
 
 
@@ -77,4 +87,10 @@ def rollback_import_job(import_id: int, db: DbSession) -> ImportSimpleMessageRes
         rollback_import(db, import_id)
     except LookupError as exc:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc)) from exc
+    write_operation_log(
+        db,
+        module="imports",
+        message="入库已回滚",
+        detail=f"入库任务编号：{import_id}",
+    )
     return ImportSimpleMessageResponse(message="入库回滚完成")

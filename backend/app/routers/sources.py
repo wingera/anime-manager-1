@@ -18,6 +18,7 @@ from app.schemas.sources import (
     SourceSiteUpdate,
     SourceTestResponse,
 )
+from app.services.log_service import write_operation_log
 from app.services.source_service import (
     SourceTestError,
     create_source,
@@ -63,6 +64,12 @@ def add_source(payload: SourceSiteCreate, db: DbSession) -> SourceSiteMessageRes
         source = create_source(db, payload)
     except ValueError as exc:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
+    write_operation_log(
+        db,
+        module="sources",
+        message="来源已创建",
+        detail=f"来源名称：{source.name}",
+    )
     return SourceSiteMessageResponse(message="来源已创建", source=_source_response(source))
 
 
@@ -101,7 +108,20 @@ def preview_source(source_id: int, db: DbSession) -> SourceTestResponse:
     try:
         found_count, items = test_source(db, source)
     except SourceTestError as exc:
+        write_operation_log(
+            db,
+            level="warning",
+            module="sources",
+            message="来源测试失败",
+            detail=f"来源名称：{source.name}",
+        )
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
+    write_operation_log(
+        db,
+        module="sources",
+        message="来源测试完成",
+        detail=f"来源名称：{source.name}，发现资源数量：{found_count}",
+    )
     return SourceTestResponse(
         message="来源测试完成",
         source_id=source_id,
@@ -130,6 +150,12 @@ def add_source_items(
     except ValueError as exc:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
 
+    write_operation_log(
+        db,
+        module="sources",
+        message="资源已加入资源库",
+        detail=f"来源编号：{source_id}，新增：{created_count}，跳过：{skipped_count}",
+    )
     return SourceItemImportResponse(
         message="资源已加入资源库",
         created_count=created_count,

@@ -11,6 +11,7 @@ from app.schemas.matching import (
     MediaMatchSaveRequest,
     TmdbSearchResponse,
 )
+from app.services.log_service import write_operation_log
 from app.services.matching_service import (
     TmdbSearchError,
     get_source_item,
@@ -47,6 +48,12 @@ def save_match(
     if item is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="资源不存在")
     media_match = save_media_match(db, source_item_id=item.id, payload=payload)
+    write_operation_log(
+        db,
+        module="matching",
+        message="匹配信息已保存",
+        detail=f"资源编号：{item.id}，匹配分：{media_match.match_score}",
+    )
     return MediaMatchMessageResponse(
         message="匹配信息已保存",
         match=MediaMatchResponse.model_validate(media_match),

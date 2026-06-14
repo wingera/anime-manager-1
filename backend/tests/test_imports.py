@@ -14,6 +14,7 @@ from app.db.models import (
     AppSettings,
     DownloadFile,
     DownloadTask,
+    ImportJob,
     MediaMatch,
     RenamePreview,
     SourceItem,
@@ -189,6 +190,46 @@ def test_import_requires_rename_preview(
 
     assert response.status_code == 400
     assert response.json()["detail"] == "请先生成命名预览。"
+
+
+def test_import_rejects_when_all_previews_are_conflicted(
+    client: TestClient,
+    db_session: Session,
+    tmp_path: Path,
+) -> None:
+    download_dir = tmp_path / "downloads"
+    media_dir = tmp_path / "media"
+    _configure_paths(db_session, download_dir, media_dir)
+    download = _create_download(db_session, download_dir)
+    download_file = _add_file(db_session, download)
+    _write_source_file(download_dir, download_file.name)
+    _add_preview(db_session, download_file, _target_path(media_dir), conflict=True)
+
+    response = client.post(f"/api/downloads/{download.id}/import")
+
+    assert response.status_code == 400
+    assert response.json()["detail"] == "没有可入库的文件，请检查命名预览或文件选择。"
+    assert db_session.query(ImportJob).count() == 0
+
+
+def test_import_rejects_when_all_files_are_unselected(
+    client: TestClient,
+    db_session: Session,
+    tmp_path: Path,
+) -> None:
+    download_dir = tmp_path / "downloads"
+    media_dir = tmp_path / "media"
+    _configure_paths(db_session, download_dir, media_dir)
+    download = _create_download(db_session, download_dir)
+    download_file = _add_file(db_session, download, selected=False)
+    _write_source_file(download_dir, download_file.name)
+    _add_preview(db_session, download_file, _target_path(media_dir))
+
+    response = client.post(f"/api/downloads/{download.id}/import")
+
+    assert response.status_code == 400
+    assert response.json()["detail"] == "没有可入库的文件，请检查命名预览或文件选择。"
+    assert db_session.query(ImportJob).count() == 0
 
 
 def test_import_records_failed_action_when_source_file_missing(

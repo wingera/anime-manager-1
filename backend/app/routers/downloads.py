@@ -15,6 +15,7 @@ from app.services.download_service import (
     list_download_tasks,
     refresh_download_task,
 )
+from app.services.log_service import write_operation_log
 
 router = APIRouter(tags=["下载队列"])
 DbSession = Annotated[Session, Depends(get_db)]
@@ -40,6 +41,12 @@ def add_download(item_id: int, db: DbSession) -> DownloadTaskMessageResponse:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc)) from exc
     except ValueError as exc:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
+    write_operation_log(
+        db,
+        module="downloads",
+        message="下载任务已创建",
+        detail=f"资源编号：{item_id}，下载任务编号：{download.id}",
+    )
     return DownloadTaskMessageResponse(message="下载任务已创建", download=download)
 
 

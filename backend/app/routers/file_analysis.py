@@ -23,6 +23,7 @@ from app.services.file_analysis_service import (
     list_rename_previews,
     update_download_file,
 )
+from app.services.log_service import write_operation_log
 
 router = APIRouter(tags=["文件分析"])
 DbSession = Annotated[Session, Depends(get_db)]
@@ -56,6 +57,12 @@ def analyze_files(download_id: int, db: DbSession) -> FileAnalysisMessageRespons
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc)) from exc
     except ValueError as exc:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
+    write_operation_log(
+        db,
+        module="analysis",
+        message="文件分析完成",
+        detail=f"下载任务编号：{download_id}，文件数量：{len(files)}",
+    )
     return FileAnalysisMessageResponse(message="文件分析完成", files=_file_responses(files))
 
 
@@ -116,6 +123,12 @@ def create_rename_preview(download_id: int, db: DbSession) -> RenamePreviewListR
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc)) from exc
     except ValueError as exc:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
+    write_operation_log(
+        db,
+        module="analysis",
+        message="命名预览已生成",
+        detail=f"下载任务编号：{download_id}，预览数量：{len(previews)}",
+    )
     return RenamePreviewListResponse(
         message="命名预览已生成",
         previews=_preview_responses(previews),

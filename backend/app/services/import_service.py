@@ -16,6 +16,7 @@ from app.services.settings_service import get_or_create_settings
 from app.utils.path_guard import ensure_parent_dir, ensure_target_inside, resolve_inside
 
 PREVIEW_REQUIRED_MESSAGE = "请先生成命名预览。"
+NO_ELIGIBLE_FILES_MESSAGE = "没有可入库的文件，请检查命名预览或文件选择。"
 SOURCE_MISSING_MESSAGE = "源文件不存在"
 TARGET_EXISTS_MESSAGE = "目标文件已存在"
 FILE_OPERATION_FAILED_MESSAGE = "文件操作失败，请检查目录权限。"
@@ -56,15 +57,17 @@ def execute_import(db: Session, download_id: int, mode: str = "hardlink") -> Imp
     if not preview_rows:
         raise ValueError(PREVIEW_REQUIRED_MESSAGE)
 
-    import_job = ImportJob(download_task_id=download.id, status="pending", mode=mode)
-    db.add(import_job)
-    db.flush()
-
     eligible_rows = [
         (preview, download_file)
         for preview, download_file in preview_rows
         if not preview.conflict and download_file.selected
     ]
+    if not eligible_rows:
+        raise ValueError(NO_ELIGIBLE_FILES_MESSAGE)
+
+    import_job = ImportJob(download_task_id=download.id, status="pending", mode=mode)
+    db.add(import_job)
+    db.flush()
     completed_files = 0
     failed_messages: list[str] = []
     for preview, download_file in eligible_rows:

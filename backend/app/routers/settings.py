@@ -7,6 +7,7 @@ from app.db.database import get_db
 from app.integrations.qbittorrent import test_qbittorrent_connection
 from app.integrations.tmdb import test_tmdb_connection
 from app.schemas.settings import ConnectionTestResponse, SettingsResponse, SettingsUpdateRequest
+from app.services.log_service import write_operation_log
 from app.services.settings_service import get_or_create_settings, to_response, update_settings
 from app.utils.secrets import decrypt_secret
 
@@ -26,6 +27,12 @@ def save_settings(
     db: DbSession,
 ) -> SettingsResponse:
     settings = update_settings(db, payload)
+    write_operation_log(
+        db,
+        module="settings",
+        message="系统设置已保存",
+        detail="用户保存了系统设置。",
+    )
     return to_response(settings)
 
 

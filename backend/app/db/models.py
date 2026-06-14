@@ -296,6 +296,17 @@ class ImportFileAction(Base):
     )
 
 
+class OperationLog(Base):
+    __tablename__ = "operation_logs"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
+    level: Mapped[str] = mapped_column(String(20), default="info", nullable=False)
+    module: Mapped[str] = mapped_column(String(40), index=True, nullable=False)
+    message: Mapped[str] = mapped_column(Text, nullable=False)
+    detail: Mapped[str | None] = mapped_column(Text, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, nullable=False)
+
+
 class MediaFile(Base):
     __tablename__ = "media_files"
 
