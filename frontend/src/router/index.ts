@@ -18,6 +18,11 @@ const router = createRouter({
       path: '/sources',
       name: 'sources',
       component: () => import('../pages/SourceManagement.vue')
+    },
+    {
+      path: '/resources',
+      name: 'resources',
+      component: () => import('../pages/ResourceLibrary.vue')
     }
   ]
 })

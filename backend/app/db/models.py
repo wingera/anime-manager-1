@@ -76,6 +76,34 @@ class SourceItem(Base):
     )
 
 
+class MediaMatch(Base):
+    __tablename__ = "media_matches"
+    __table_args__ = (UniqueConstraint("source_item_id", name="uq_media_matches_source_item_id"),)
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
+    source_item_id: Mapped[int] = mapped_column(
+        ForeignKey("source_items.id"),
+        nullable=False,
+        index=True,
+    )
+    tmdb_id: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    title: Mapped[str | None] = mapped_column(Text, nullable=True)
+    original_title: Mapped[str | None] = mapped_column(Text, nullable=True)
+    year: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    season_number: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    episode_number: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    episode_title: Mapped[str | None] = mapped_column(Text, nullable=True)
+    match_score: Mapped[float] = mapped_column(Float, default=0, nullable=False)
+    status: Mapped[str] = mapped_column(String(40), default="pending", nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, nullable=False)
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime,
+        default=datetime.utcnow,
+        onupdate=datetime.utcnow,
+        nullable=False,
+    )
+
+
 class AppSettings(Base):
     __tablename__ = "app_settings"
 

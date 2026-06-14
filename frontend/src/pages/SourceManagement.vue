@@ -2,11 +2,12 @@
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { computed, onMounted, reactive, ref } from 'vue'
 import { useSourcesStore } from '../stores/sources'
-import type { SourceFormPayload, SourceSite, SourceType } from '../types/sources'
+import type { SourceFormPayload, SourcePreviewItem, SourceSite, SourceType } from '../types/sources'
 
 const sourcesStore = useSourcesStore()
 const dialogVisible = ref(false)
 const editingSourceId = ref<number | null>(null)
+const selectedPreviewItems = ref<SourcePreviewItem[]>([])
 
 const emptyForm = (): SourceFormPayload => ({
   name: '',
@@ -111,9 +112,31 @@ async function removeSource(source: SourceSite): Promise<void> {
 async function testSource(source: SourceSite): Promise<void> {
   try {
     const result = await sourcesStore.testSource(source.id)
+    selectedPreviewItems.value = []
     ElMessage.success(result.message)
   } catch (error) {
     ElMessage.error(getErrorMessage(error, '来源测试失败'))
+  }
+}
+
+function handlePreviewSelectionChange(items: SourcePreviewItem[]): void {
+  selectedPreviewItems.value = items
+}
+
+async function addSelectedPreviewItems(): Promise<void> {
+  if (sourcesStore.previewSourceId === null || selectedPreviewItems.value.length === 0) {
+    ElMessage.warning('请先选择要加入资源库的资源')
+    return
+  }
+  try {
+    const result = await sourcesStore.addPreviewItems(
+      sourcesStore.previewSourceId,
+      selectedPreviewItems.value
+    )
+    ElMessage.success(`资源已加入资源库，新增 ${result.created_count} 个，跳过 ${result.skipped_count} 个`)
+    selectedPreviewItems.value = []
+  } catch (error) {
+    ElMessage.error(getErrorMessage(error, '加入资源库失败'))
   }
 }
 
@@ -200,9 +223,22 @@ onMounted(() => {
             {{ sourcesStore.previewItems.length }} 个。
           </p>
         </div>
+        <el-button
+          type="primary"
+          :disabled="selectedPreviewItems.length === 0"
+          :loading="sourcesStore.saving"
+          @click="addSelectedPreviewItems"
+        >
+          加入资源库
+        </el-button>
       </div>
       <div class="table-wrap">
-        <el-table :data="sourcesStore.previewItems" empty-text="未识别到资源指纹">
+        <el-table
+          :data="sourcesStore.previewItems"
+          empty-text="未识别到资源指纹"
+          @selection-change="handlePreviewSelectionChange"
+        >
+          <el-table-column type="selection" width="48" />
           <el-table-column prop="title" label="标题" min-width="220" />
           <el-table-column prop="info_hash" label="资源指纹" min-width="300" />
           <el-table-column prop="magnet_uri" label="磁力入口" min-width="360" />
@@ -440,6 +476,7 @@ onMounted(() => {
   }
 
   .page-heading > .el-button,
+  .section-heading > .el-button,
   .source-actions .el-button,
   .dialog-footer .el-button {
     width: 100%;

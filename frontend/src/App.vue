@@ -4,6 +4,7 @@ import { useRoute } from 'vue-router'
 
 const route = useRoute()
 const activeMenu = computed(() => {
+  if (route.path.startsWith('/resources')) return '/resources'
   if (route.path.startsWith('/sources')) return '/sources'
   if (route.path.startsWith('/settings')) return '/settings'
   return '/'
@@ -17,6 +18,7 @@ const activeMenu = computed(() => {
       <el-menu :default-active="activeMenu" router>
         <el-menu-item index="/">任务看板</el-menu-item>
         <el-menu-item index="/sources">来源管理</el-menu-item>
+        <el-menu-item index="/resources">资源库</el-menu-item>
         <el-menu-item index="/matching">匹配中心</el-menu-item>
         <el-menu-item index="/downloads">下载队列</el-menu-item>
         <el-menu-item index="/analysis">文件分析</el-menu-item>

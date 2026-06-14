@@ -73,3 +73,14 @@ export interface SourceItemListResponse {
   message: string
   items: SourceItem[]
 }
+
+export interface SourceItemImportRequest {
+  items: SourcePreviewItem[]
+}
+
+export interface SourceItemImportResponse {
+  message: string
+  created_count: number
+  skipped_count: number
+  items: SourceItem[]
+}

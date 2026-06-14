@@ -4,10 +4,12 @@ import {
   deleteSource,
   getSourceItems,
   getSources,
+  importSourceItems,
   testSource,
   updateSource
 } from '../api/sources'
 import type {
+  SourceItemImportResponse,
   SourceFormPayload,
   SourceItem,
   SourcePreviewItem,
@@ -129,6 +131,23 @@ export const useSourcesStore = defineStore('sources', {
       const response = await getSourceItems()
       this.sourceItems = response.items
       return this.sourceItems
+    },
+    async addPreviewItems(
+      sourceId: number,
+      items: SourcePreviewItem[]
+    ): Promise<SourceItemImportResponse> {
+      this.saving = true
+      this.errorMessage = ''
+      try {
+        const response = await importSourceItems(sourceId, { items })
+        await this.fetchSourceItems()
+        return response
+      } catch (error) {
+        this.errorMessage = getErrorMessage(error)
+        throw error
+      } finally {
+        this.saving = false
+      }
     }
   }
 })

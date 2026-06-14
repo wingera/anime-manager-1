@@ -7,6 +7,8 @@ from app.db.database import get_db
 from app.db.models import SourceSite
 from app.schemas.sources import (
     DeleteSourceResponse,
+    SourceItemImportRequest,
+    SourceItemImportResponse,
     SourceItemListResponse,
     SourceItemResponse,
     SourceSiteCreate,
@@ -21,6 +23,7 @@ from app.services.source_service import (
     create_source,
     delete_source,
     get_source,
+    import_source_items,
     list_source_items,
     list_sources,
     test_source,
@@ -104,6 +107,34 @@ def preview_source(source_id: int, db: DbSession) -> SourceTestResponse:
         source_id=source_id,
         found_count=found_count,
         items=items,
+    )
+
+
+@router.post(
+    "/api/sources/{source_id}/items",
+    response_model=SourceItemImportResponse,
+    status_code=status.HTTP_201_CREATED,
+)
+def add_source_items(
+    source_id: int,
+    payload: SourceItemImportRequest,
+    db: DbSession,
+) -> SourceItemImportResponse:
+    _get_source_or_404(db, source_id)
+    try:
+        created_count, skipped_count, items = import_source_items(
+            db,
+            source_id=source_id,
+            items=[(item.title, item.url, item.info_hash) for item in payload.items],
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
+
+    return SourceItemImportResponse(
+        message="资源已加入资源库",
+        created_count=created_count,
+        skipped_count=skipped_count,
+        items=[SourceItemResponse.model_validate(item) for item in items],
     )
 
 

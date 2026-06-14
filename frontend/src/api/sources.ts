@@ -1,6 +1,8 @@
 import type {
   DeleteSourceResponse,
   SourceFormPayload,
+  SourceItemImportRequest,
+  SourceItemImportResponse,
   SourceItemListResponse,
   SourceListResponse,
   SourceMessageResponse,
@@ -68,4 +70,14 @@ export function testSource(sourceId: number): Promise<SourceTestResponse> {
 
 export function getSourceItems(): Promise<SourceItemListResponse> {
   return request<SourceItemListResponse>('/source-items')
+}
+
+export function importSourceItems(
+  sourceId: number,
+  payload: SourceItemImportRequest
+): Promise<SourceItemImportResponse> {
+  return request<SourceItemImportResponse>(`/sources/${sourceId}/items`, {
+    method: 'POST',
+    body: JSON.stringify(payload)
+  })
 }

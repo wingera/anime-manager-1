@@ -82,6 +82,23 @@ class SourceItemListResponse(BaseModel):
     items: list[SourceItemResponse]
 
 
+class SourceItemImportItem(BaseModel):
+    title: str = Field(min_length=1)
+    url: str | None = None
+    info_hash: str = Field(min_length=1)
+
+
+class SourceItemImportRequest(BaseModel):
+    items: list[SourceItemImportItem] = Field(min_length=1)
+
+
+class SourceItemImportResponse(BaseModel):
+    message: str
+    created_count: int
+    skipped_count: int
+    items: list[SourceItemResponse]
+
+
 class SourcePreviewItem(BaseModel):
     title: str
     url: str | None

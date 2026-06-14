@@ -146,6 +146,43 @@ def create_source_item(
     return item
 
 
+def import_source_items(
+    db: Session,
+    *,
+    source_id: int,
+    items: list[tuple[str, str | None, str]],
+) -> tuple[int, int, list[SourceItem]]:
+    created_count = 0
+    skipped_count = 0
+    result_items: list[SourceItem] = []
+
+    for title, url, info_hash in items:
+        normalized_hash = normalize_info_hash(info_hash)
+        existing = db.scalar(select(SourceItem).where(SourceItem.info_hash == normalized_hash))
+        if existing is not None:
+            skipped_count += 1
+            result_items.append(existing)
+            continue
+
+        item = SourceItem(
+            source_id=source_id,
+            title=title.strip(),
+            url=url.strip() if url else None,
+            info_hash=normalized_hash,
+            magnet_uri=build_magnet_uri(normalized_hash),
+        )
+        db.add(item)
+        db.flush()
+        db.refresh(item)
+        created_count += 1
+        result_items.append(item)
+
+    db.commit()
+    for item in result_items:
+        db.refresh(item)
+    return created_count, skipped_count, result_items
+
+
 def list_source_items(db: Session) -> list[SourceItem]:
     return list(
         db.scalars(select(SourceItem).order_by(SourceItem.created_at.desc(), SourceItem.id.desc()))
