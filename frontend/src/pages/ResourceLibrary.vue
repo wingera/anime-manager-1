@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ElMessage } from 'element-plus'
 import { computed, onMounted, reactive, ref } from 'vue'
+import { useDownloadsStore } from '../stores/downloads'
 import { useMatchingStore } from '../stores/matching'
 import { useSourcesStore } from '../stores/sources'
 import type { MediaMatch, MediaMatchPayload, TmdbCandidate } from '../types/matching'
@@ -8,6 +9,7 @@ import type { SourceItem } from '../types/sources'
 
 const sourcesStore = useSourcesStore()
 const matchingStore = useMatchingStore()
+const downloadsStore = useDownloadsStore()
 const matchDialogVisible = ref(false)
 const activeItem = ref<SourceItem | null>(null)
 const selectedCandidateId = ref<number | null>(null)
@@ -45,11 +47,29 @@ function getMatch(itemId: number): MediaMatch | undefined {
   return matchesByItemId.value.get(itemId)
 }
 
+function isMatchConfirmed(itemId: number): boolean {
+  return getMatch(itemId)?.status === 'confirmed'
+}
+
 function getMatchStatus(itemId: number): string {
   const mediaMatch = getMatch(itemId)
   if (!mediaMatch) return '未匹配'
   if (mediaMatch.status === 'confirmed') return '已确认'
   return '待确认'
+}
+
+function getSourceItemStatus(status: string): string {
+  const labels: Record<string, string> = {
+    pending: '待处理',
+    pending_review: '待确认',
+    pending_download: '待下载',
+    downloading: '下载中',
+    pending_analysis: '待分析',
+    pending_import: '待入库',
+    completed: '已完成',
+    failed: '已失败'
+  }
+  return labels[status] ?? '状态待识别'
 }
 
 function resetForm(): void {
@@ -134,6 +154,19 @@ async function saveCurrentMatch(): Promise<void> {
   }
 }
 
+async function createDownloadTask(item: SourceItem): Promise<void> {
+  if (!isMatchConfirmed(item.id)) {
+    ElMessage.warning('请先确认资料匹配')
+    return
+  }
+  try {
+    await downloadsStore.createForSourceItem(item.id)
+    ElMessage.success('下载任务已创建')
+  } catch (error) {
+    ElMessage.error(getErrorMessage(error, '创建下载任务失败'))
+  }
+}
+
 async function loadResources(): Promise<void> {
   try {
     await Promise.all([sourcesStore.fetchSourceItems(), matchingStore.fetchMatches()])
@@ -178,7 +211,7 @@ onMounted(() => {
         <div class="resource-card__main">
           <div class="resource-title-row">
             <h3>{{ item.title }}</h3>
-            <el-tag size="small">{{ item.status }}</el-tag>
+            <el-tag size="small">{{ getSourceItemStatus(item.status) }}</el-tag>
             <el-tag :type="getMatch(item.id) ? 'success' : 'warning'" size="small">
               {{ getMatchStatus(item.id) }}
             </el-tag>
@@ -218,6 +251,23 @@ onMounted(() => {
             搜索 TMDB
           </el-button>
           <el-button @click="openMatchDialog(item)">确认匹配</el-button>
+          <el-tooltip
+            :disabled="isMatchConfirmed(item.id)"
+            content="请先确认资料匹配"
+            placement="top"
+          >
+            <span class="action-tooltip-wrap">
+              <el-button
+                type="success"
+                plain
+                :disabled="!isMatchConfirmed(item.id)"
+                :loading="downloadsStore.creatingItemId === item.id"
+                @click="createDownloadTask(item)"
+              >
+                创建下载任务
+              </el-button>
+            </span>
+          </el-tooltip>
         </div>
       </article>
     </div>
@@ -405,6 +455,10 @@ onMounted(() => {
   margin-left: 0;
 }
 
+.action-tooltip-wrap {
+  display: inline-flex;
+}
+
 .match-dialog {
   display: grid;
   gap: 18px;
@@ -505,7 +559,12 @@ onMounted(() => {
 
   .page-heading > .el-button,
   .resource-actions .el-button,
+  .action-tooltip-wrap,
   .dialog-footer .el-button {
+    width: 100%;
+  }
+
+  .action-tooltip-wrap :deep(.el-button) {
     width: 100%;
   }
 

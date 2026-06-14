@@ -23,6 +23,11 @@ const router = createRouter({
       path: '/resources',
       name: 'resources',
       component: () => import('../pages/ResourceLibrary.vue')
+    },
+    {
+      path: '/downloads',
+      name: 'downloads',
+      component: () => import('../pages/DownloadQueue.vue')
     }
   ]
 })

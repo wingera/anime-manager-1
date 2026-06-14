@@ -166,14 +166,20 @@ class MetadataMatch(Base):
 
 class DownloadTask(Base):
     __tablename__ = "download_tasks"
+    __table_args__ = (UniqueConstraint("source_item_id", name="uq_download_tasks_source_item_id"),)
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
-    resource_id: Mapped[int] = mapped_column(Integer, index=True, nullable=False)
-    torrent_hash: Mapped[str] = mapped_column(String(64), default="", nullable=False)
-    save_path: Mapped[str] = mapped_column(Text, default="", nullable=False)
+    source_item_id: Mapped[int] = mapped_column(
+        ForeignKey("source_items.id"),
+        nullable=False,
+        index=True,
+    )
+    qbittorrent_hash: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    magnet_uri: Mapped[str] = mapped_column(Text, nullable=False)
+    save_path: Mapped[str] = mapped_column(Text, default="/downloads", nullable=False)
+    status: Mapped[str] = mapped_column(String(40), default="pending", nullable=False)
     progress: Mapped[float] = mapped_column(Float, default=0, nullable=False)
-    status: Mapped[str] = mapped_column(String(40), default="pending_download", nullable=False)
-    error_message: Mapped[str] = mapped_column(Text, default="", nullable=False)
+    error_message: Mapped[str | None] = mapped_column(Text, nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, nullable=False)
     updated_at: Mapped[datetime] = mapped_column(
         DateTime,
