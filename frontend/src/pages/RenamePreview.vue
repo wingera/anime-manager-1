@@ -1,11 +1,14 @@
 <script setup lang="ts">
 import { ElMessage } from 'element-plus'
 import { computed, onMounted } from 'vue'
-import { useRoute } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 import { useFileAnalysisStore } from '../stores/fileAnalysis'
+import { useImportsStore } from '../stores/imports'
 
 const route = useRoute()
+const router = useRouter()
 const fileAnalysisStore = useFileAnalysisStore()
+const importsStore = useImportsStore()
 const downloadId = computed(() => Number(route.query.download_id ?? 0))
 
 function getErrorMessage(error: unknown, fallback: string): string {
@@ -37,6 +40,20 @@ async function generatePreviews(): Promise<void> {
   }
 }
 
+async function executeImport(): Promise<void> {
+  if (!downloadId.value) {
+    ElMessage.warning('请先从下载队列选择下载任务')
+    return
+  }
+  try {
+    await importsStore.executeForDownload(downloadId.value)
+    ElMessage.success('入库执行完成')
+    void router.push('/imports')
+  } catch (error) {
+    ElMessage.error(getErrorMessage(error, '执行入库失败'))
+  }
+}
+
 onMounted(() => {
   void loadPreviews()
 })
@@ -54,8 +71,24 @@ onMounted(() => {
         <el-button type="primary" :loading="fileAnalysisStore.generating" @click="generatePreviews">
           生成预览
         </el-button>
+        <el-button
+          type="success"
+          :loading="importsStore.executing"
+          :disabled="fileAnalysisStore.previews.length === 0"
+          @click="executeImport"
+        >
+          执行入库
+        </el-button>
       </div>
     </div>
+
+    <el-alert
+      class="page-alert"
+      type="warning"
+      title="当前只会硬链接或复制到媒体库，不会删除原文件。"
+      show-icon
+      :closable="false"
+    />
 
     <el-alert
       v-if="fileAnalysisStore.errorMessage"

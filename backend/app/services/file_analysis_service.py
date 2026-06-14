@@ -212,28 +212,32 @@ def generate_rename_previews(db: Session, download_id: int) -> list[RenamePrevie
     download = _download_or_404(db, download_id)
     media_match = _confirmed_match(db, download)
     settings = get_or_create_settings(db)
-    files = list(
+    selected_files = list(
         db.scalars(
             select(DownloadFile)
             .where(
                 DownloadFile.download_task_id == download_id,
                 DownloadFile.selected.is_(True),
-                DownloadFile.file_type == "video",
+                DownloadFile.file_type.in_(("video", "subtitle")),
             )
             .order_by(DownloadFile.file_index)
         )
     )
+    video_files = [file for file in selected_files if file.file_type == "video"]
+    subtitle_files = [file for file in selected_files if file.file_type == "subtitle"]
 
-    file_ids = [file.id for file in files]
-    if file_ids:
-        db.execute(
-            delete(RenamePreview).where(
-                RenamePreview.download_file_id.in_(file_ids)
-            )
+    all_task_file_ids = list(
+        db.scalars(
+            select(DownloadFile.id).where(DownloadFile.download_task_id == download_id)
         )
+    )
+    if all_task_file_ids:
+        db.execute(delete(RenamePreview).where(RenamePreview.download_file_id.in_(all_task_file_ids)))
+
     target_paths: list[str] = []
     previews: list[RenamePreview] = []
-    for download_file in files:
+    video_preview_by_id: dict[int, RenamePreview] = {}
+    for download_file in video_files:
         extension = Path(download_file.name).suffix
         season_number = download_file.season_number or media_match.season_number
         episode_number = download_file.episode_number or media_match.episode_number
@@ -257,9 +261,47 @@ def generate_rename_previews(db: Session, download_id: int) -> list[RenamePrevie
         )
         db.add(preview)
         previews.append(preview)
+        video_preview_by_id[download_file.id] = preview
+
+    unmatched_subtitle_ids: set[int] = set()
+    for download_file in subtitle_files:
+        extension = Path(download_file.name).suffix
+        matched_video = _match_subtitle_video(download_file, video_files)
+        if matched_video is None:
+            unmatched_subtitle_ids.add(download_file.id)
+            season_number = download_file.season_number or media_match.season_number
+            episode_number = download_file.episode_number or media_match.episode_number
+            target_path = build_target_path(
+                media_library_dir=settings.media_library_dir,
+                title=media_match.title or "未命名",
+                year=media_match.year,
+                tmdb_id=media_match.tmdb_id,
+                season_number=season_number,
+                episode_number=episode_number,
+                episode_title=media_match.episode_title,
+                extension=extension,
+            )
+            warning_message = "字幕未能自动匹配正片，请人工确认。"
+        else:
+            video_preview = video_preview_by_id[matched_video.id]
+            target_path = str(Path(video_preview.target_path).with_suffix(extension))
+            warning_message = None
+        target_paths.append(target_path)
+        preview = RenamePreview(
+            download_file_id=download_file.id,
+            original_path=download_file.name,
+            target_path=target_path,
+            conflict=False,
+            warning_message=warning_message,
+        )
+        db.add(preview)
+        previews.append(preview)
 
     counts = Counter(target_paths)
     for preview in previews:
+        if preview.download_file_id in unmatched_subtitle_ids:
+            preview.conflict = False
+            continue
         path_exists = Path(preview.target_path).exists()
         duplicate = counts[preview.target_path] > 1
         preview.conflict = path_exists or duplicate
@@ -272,3 +314,40 @@ def generate_rename_previews(db: Session, download_id: int) -> list[RenamePrevie
     for preview in previews:
         db.refresh(preview)
     return list_rename_previews(db, download_id)
+
+
+def _match_subtitle_video(
+    subtitle_file: DownloadFile,
+    video_files: list[DownloadFile],
+) -> DownloadFile | None:
+    subtitle_path = Path(subtitle_file.name)
+    subtitle_parent = subtitle_path.parent
+    subtitle_stem = subtitle_path.stem.lower()
+    subtitle_episode = subtitle_file.episode_number
+
+    def same_parent(video_file: DownloadFile) -> bool:
+        return Path(video_file.name).parent == subtitle_parent
+
+    def same_stem(video_file: DownloadFile) -> bool:
+        return Path(video_file.name).stem.lower() == subtitle_stem
+
+    def same_episode(video_file: DownloadFile) -> bool:
+        return (
+            subtitle_episode is not None
+            and video_file.episode_number is not None
+            and subtitle_episode == video_file.episode_number
+        )
+
+    for video_file in video_files:
+        if same_parent(video_file) and same_stem(video_file):
+            return video_file
+    for video_file in video_files:
+        if same_parent(video_file) and same_episode(video_file):
+            return video_file
+    for video_file in video_files:
+        if same_stem(video_file):
+            return video_file
+    for video_file in video_files:
+        if same_episode(video_file):
+            return video_file
+    return None

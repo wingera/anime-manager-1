@@ -245,6 +245,57 @@ class RenamePreview(Base):
     )
 
 
+class ImportJob(Base):
+    __tablename__ = "import_jobs"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
+    download_task_id: Mapped[int] = mapped_column(
+        ForeignKey("download_tasks.id"),
+        nullable=False,
+        index=True,
+    )
+    status: Mapped[str] = mapped_column(String(40), default="pending", nullable=False)
+    mode: Mapped[str] = mapped_column(String(40), default="hardlink", nullable=False)
+    total_files: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    completed_files: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    error_message: Mapped[str | None] = mapped_column(Text, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, nullable=False)
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime,
+        default=datetime.utcnow,
+        onupdate=datetime.utcnow,
+        nullable=False,
+    )
+
+
+class ImportFileAction(Base):
+    __tablename__ = "import_file_actions"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
+    import_job_id: Mapped[int] = mapped_column(
+        ForeignKey("import_jobs.id"),
+        nullable=False,
+        index=True,
+    )
+    download_file_id: Mapped[int] = mapped_column(
+        ForeignKey("download_files.id"),
+        nullable=False,
+        index=True,
+    )
+    source_path: Mapped[str] = mapped_column(Text, nullable=False)
+    target_path: Mapped[str] = mapped_column(Text, nullable=False)
+    action_type: Mapped[str] = mapped_column(String(40), default="hardlink", nullable=False)
+    status: Mapped[str] = mapped_column(String(40), default="pending", nullable=False)
+    error_message: Mapped[str | None] = mapped_column(Text, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, nullable=False)
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime,
+        default=datetime.utcnow,
+        onupdate=datetime.utcnow,
+        nullable=False,
+    )
+
+
 class MediaFile(Base):
     __tablename__ = "media_files"
 

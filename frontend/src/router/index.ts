@@ -38,6 +38,11 @@ const router = createRouter({
       path: '/preview',
       name: 'preview',
       component: () => import('../pages/RenamePreview.vue')
+    },
+    {
+      path: '/imports',
+      name: 'imports',
+      component: () => import('../pages/ImportRecords.vue')
     }
   ]
 })
