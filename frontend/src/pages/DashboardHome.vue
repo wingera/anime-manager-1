@@ -1,5 +1,4 @@
 <script setup lang="ts">
-import { ElMessage } from 'element-plus'
 import { computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useDashboardStore } from '../stores/dashboard'
@@ -33,10 +32,6 @@ const quickLinks = [
   { label: '入库记录', path: '/imports' },
   { label: '系统设置', path: '/settings' }
 ]
-
-function getErrorMessage(error: unknown, fallback: string): string {
-  return error instanceof Error ? error.message : fallback
-}
 
 function getLevelLabel(level: OperationLogLevel): string {
   const labels: Record<OperationLogLevel, string> = {
@@ -79,8 +74,8 @@ function logKey(log: OperationLog): string {
 async function loadSummary(): Promise<void> {
   try {
     await dashboardStore.fetchSummary()
-  } catch (error) {
-    ElMessage.error(getErrorMessage(error, '读取任务看板失败'))
+  } catch {
+    // 错误内容由页面内 alert 展示，避免加载时同时弹出重复提示。
   }
 }
 

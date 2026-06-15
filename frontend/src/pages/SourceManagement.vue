@@ -82,8 +82,8 @@ function getErrorMessage(error: unknown, fallback: string): string {
 async function loadSources(): Promise<void> {
   try {
     await sourcesStore.fetchSources()
-  } catch (error) {
-    ElMessage.error(getErrorMessage(error, '读取来源失败'))
+  } catch {
+    // 错误内容由页面内 alert 展示，避免加载时同时弹出重复提示。
   }
 }
 

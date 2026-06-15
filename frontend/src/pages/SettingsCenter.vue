@@ -50,8 +50,8 @@ async function loadSettings(): Promise<void> {
   try {
     await settingsStore.fetchSettings()
     fillForm()
-  } catch (error) {
-    ElMessage.error(error instanceof Error ? error.message : '读取设置失败')
+  } catch {
+    // 错误内容由页面内 alert 展示，避免加载时同时弹出重复提示。
   }
 }
 

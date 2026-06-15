@@ -1,0 +1,213 @@
+:root {
+  color: #172033;
+  background: #f4f7fb;
+  font-family:
+    "SF Pro Text",
+    "PingFang SC",
+    "Hiragino Sans GB",
+    "Microsoft YaHei",
+    sans-serif;
+  text-rendering: optimizeLegibility;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  min-width: 320px;
+  background:
+    linear-gradient(180deg, #f7faff 0%, #f3f6fb 42%, #eef3f8 100%);
+}
+
+button,
+input,
+textarea,
+select {
+  font: inherit;
+}
+
+#app {
+  min-height: 100vh;
+}
+
+#app .main-content :where(
+  .dashboard-page,
+  .sources-page,
+  .resource-page,
+  .downloads-page,
+  .analysis-page,
+  .preview-page,
+  .rename-page,
+  .imports-page,
+  .logs-page,
+  .settings-page,
+  .setup-page,
+  .backup-page,
+  .diagnostics-page
+) {
+  width: min(100%, 1180px);
+  max-width: none;
+  margin: 0 auto;
+}
+
+#app .main-content .page-heading {
+  align-items: flex-start;
+  min-height: 72px;
+  margin-bottom: 20px;
+  padding-bottom: 18px;
+  border-bottom: 1px solid rgba(143, 158, 181, 0.2);
+}
+
+#app .main-content .page-heading h2 {
+  color: #0f172a;
+  font-size: 26px;
+  font-weight: 700;
+  letter-spacing: 0;
+}
+
+#app .main-content .page-heading p {
+  max-width: 680px;
+  color: #607086;
+  font-size: 14px;
+}
+
+#app .main-content .section-heading {
+  margin-bottom: 14px;
+}
+
+#app .main-content .section-heading h3 {
+  color: #172033;
+  font-size: 17px;
+  font-weight: 700;
+}
+
+#app .main-content :where(
+  .status-card,
+  .latest-log,
+  .source-card,
+  .resource-card,
+  .download-card,
+  .file-card,
+  .preview-card,
+  .log-card,
+  .check-card,
+  .import-card,
+  .backup-card
+) {
+  border: 1px solid rgba(143, 158, 181, 0.24);
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.92);
+  box-shadow: 0 12px 32px rgba(15, 23, 42, 0.04);
+}
+
+#app .main-content :where(.status-card) {
+  min-height: 104px;
+  padding: 18px 20px;
+}
+
+#app .main-content :where(.status-card span) {
+  color: #607086;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+#app .main-content :where(.status-card strong) {
+  color: #0f172a;
+  font-size: 30px;
+  font-weight: 750;
+}
+
+#app .main-content :where(
+  .source-meta,
+  .resource-meta,
+  .download-meta,
+  .file-meta,
+  .preview-meta
+) dt {
+  color: #718096;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+#app .main-content :where(
+  .source-meta,
+  .resource-meta,
+  .download-meta,
+  .file-meta,
+  .preview-meta
+) dd {
+  color: #172033;
+  font-size: 14px;
+}
+
+#app .main-content .el-alert {
+  border-radius: 8px;
+}
+
+#app .main-content .el-empty {
+  margin: 48px auto 24px;
+  padding: 36px 24px;
+  border: 1px dashed rgba(143, 158, 181, 0.34);
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.62);
+}
+
+#app .main-content .el-card {
+  overflow: hidden;
+  border: 1px solid rgba(143, 158, 181, 0.22);
+  border-radius: 10px;
+  box-shadow: 0 12px 32px rgba(15, 23, 42, 0.045);
+}
+
+#app .main-content .el-card__header {
+  padding: 16px 20px;
+  background: #fbfcfe;
+  color: #172033;
+  font-weight: 700;
+}
+
+#app .main-content .el-card__body {
+  padding: 20px;
+}
+
+#app .main-content .el-button {
+  border-radius: 7px;
+  font-weight: 600;
+}
+
+#app .main-content .el-input__wrapper,
+#app .main-content .el-textarea__inner {
+  border-radius: 7px;
+}
+
+#app .main-content .el-table {
+  border-radius: 10px;
+}
+
+#app .main-content .el-table th.el-table__cell {
+  background: #f8fafc;
+  color: #526173;
+  font-weight: 700;
+}
+
+@media (max-width: 900px) {
+  #app .main-content .page-heading {
+    min-height: 0;
+  }
+}
+
+@media (max-width: 720px) {
+  #app .main-content .page-heading {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  #app .main-content .page-heading > .el-button,
+  #app .main-content .page-heading .heading-actions,
+  #app .main-content .page-heading .toolbar {
+    width: 100%;
+  }
+}
