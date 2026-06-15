@@ -9,6 +9,7 @@ from sqlalchemy.pool import StaticPool
 
 from app.db.database import Base, get_db
 from app.db.models import DownloadFile, DownloadTask, MediaMatch, OperationLog, SourceItem
+from app.integrations.nas115 import rename_file
 from app.main import app
 
 
@@ -190,6 +191,11 @@ def test_nas115_apply_priority_saves_selection_without_remote_call(
 
     assert response.status_code == 200
     assert response.json()["message"] == "115 网盘模式不需要设置下载器文件优先级，已保存文件选择。"
+
+
+def test_nas115_rename_file_reports_missing_service_capability() -> None:
+    with pytest.raises(ValueError, match="115 服务未提供该能力，请检查 NAS 服务接口。"):
+        rename_file("http://192.168.1.19:9527", "nas-secret-token", "file-1", "新文件名.mkv")
 
 
 def test_nas115_rename_calls_remote_file_rename(

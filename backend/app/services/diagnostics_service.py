@@ -81,6 +81,13 @@ def run_diagnostics(db: Session) -> DiagnosticsResponse:
                 message="NAS 115 服务未启用",
             )
         )
+    checks.append(
+        DiagnosticCheck(
+            name="NAS 115 重命名接口",
+            status="warning",
+            message="未发现",
+        )
+    )
 
     if settings.tmdb_api_key:
         checks.append(DiagnosticCheck(name="TMDB 配置", status="ok", message="TMDB 已配置"))

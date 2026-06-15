@@ -182,7 +182,7 @@ onMounted(() => {
       v-if="isNas115Task"
       class="rename-alert"
       type="info"
-      title="该操作会调用 NAS 上的 115 服务重命名网盘文件，不会删除文件。"
+      title="当前 NAS 115 服务未提供重命名接口，只能生成预览，暂不能执行网盘内重命名。"
       show-icon
       :closable="false"
     />
