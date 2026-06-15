@@ -3,9 +3,11 @@ import { ElMessage } from 'element-plus'
 import { computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useDashboardStore } from '../stores/dashboard'
+import { useSetupStore } from '../stores/setup'
 import type { OperationLog, OperationLogLevel } from '../types/logs'
 
 const dashboardStore = useDashboardStore()
+const setupStore = useSetupStore()
 const router = useRouter()
 
 const summary = computed(() => dashboardStore.summary)
@@ -88,6 +90,7 @@ function openPath(path: string): void {
 
 onMounted(() => {
   void loadSummary()
+  void setupStore.fetchStatus()
 })
 </script>
 
@@ -100,6 +103,20 @@ onMounted(() => {
       </div>
       <el-button :loading="dashboardStore.loading" @click="loadSummary">刷新</el-button>
     </div>
+
+    <el-alert
+      v-if="setupStore.status && !setupStore.status.installed"
+      class="dashboard-alert"
+      type="warning"
+      title="首次安装尚未完成"
+      description="请进入安装向导填写 TMDB、qBittorrent、下载目录、媒体库目录和匹配阈值。"
+      show-icon
+      :closable="false"
+    >
+      <template #default>
+        <el-button type="warning" plain @click="openPath('/setup')">进入安装向导</el-button>
+      </template>
+    </el-alert>
 
     <el-alert
       v-if="dashboardStore.errorMessage"

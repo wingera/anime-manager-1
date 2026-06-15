@@ -3,7 +3,7 @@ from sqlalchemy.orm import Session
 
 from app.db.models import AppSettings
 from app.schemas.settings import SettingsResponse, SettingsUpdateRequest
-from app.utils.secrets import encrypt_secret
+from app.utils.secrets import decrypt_secret, encrypt_secret, is_encrypted_secret
 
 
 def get_or_create_settings(db: Session) -> AppSettings:
@@ -27,6 +27,11 @@ def update_settings(db: Session, payload: SettingsUpdateRequest) -> AppSettings:
             setattr(settings, field, encrypt_secret(None if value == "" else value))
             continue
         setattr(settings, field, value)
+
+    for field in ("tmdb_api_key", "qbittorrent_password"):
+        current_value = getattr(settings, field)
+        if current_value and not is_encrypted_secret(current_value):
+            setattr(settings, field, encrypt_secret(decrypt_secret(current_value)))
 
     db.add(settings)
     db.commit()

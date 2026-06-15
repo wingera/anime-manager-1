@@ -12,6 +12,9 @@ const activeMenu = computed(() => {
   if (route.path.startsWith('/resources')) return '/resources'
   if (route.path.startsWith('/sources')) return '/sources'
   if (route.path.startsWith('/settings')) return '/settings'
+  if (route.path.startsWith('/setup')) return '/setup'
+  if (route.path.startsWith('/backup')) return '/backup'
+  if (route.path.startsWith('/diagnostics')) return '/diagnostics'
   return '/'
 })
 </script>
@@ -30,6 +33,9 @@ const activeMenu = computed(() => {
         <el-menu-item index="/preview">命名预览</el-menu-item>
         <el-menu-item index="/imports">入库记录</el-menu-item>
         <el-menu-item index="/settings">系统设置</el-menu-item>
+        <el-menu-item index="/setup">安装向导</el-menu-item>
+        <el-menu-item index="/backup">备份恢复</el-menu-item>
+        <el-menu-item index="/diagnostics">系统诊断</el-menu-item>
         <el-menu-item index="/logs">运行日志</el-menu-item>
       </el-menu>
     </el-aside>

@@ -15,6 +15,21 @@ const router = createRouter({
       component: () => import('../pages/SettingsCenter.vue')
     },
     {
+      path: '/setup',
+      name: 'setup',
+      component: () => import('../pages/SetupWizard.vue')
+    },
+    {
+      path: '/backup',
+      name: 'backup',
+      component: () => import('../pages/BackupRestore.vue')
+    },
+    {
+      path: '/diagnostics',
+      name: 'diagnostics',
+      component: () => import('../pages/SystemDiagnostics.vue')
+    },
+    {
       path: '/sources',
       name: 'sources',
       component: () => import('../pages/SourceManagement.vue')

@@ -55,6 +55,9 @@ check_api "/api/downloads"
 check_api "/api/imports"
 check_api "/api/logs"
 check_api "/api/dashboard/summary"
+check_api "/api/setup/status"
+check_api "/api/backup/export"
+check_api "/api/diagnostics"
 
 echo "开始后端 pytest、ruff、mypy 检查"
 cd "$ROOT_DIR/backend"
@@ -67,6 +70,7 @@ cd "$ROOT_DIR/backend"
   "alembic>=1.13.0" \
   "apscheduler>=3.10.0" \
   "httpx>=0.27.0" \
+  "cryptography>=43.0.0" \
   "pytest>=8.0.0" \
   "pytest-asyncio>=0.23.0" \
   "ruff>=0.6.0" \
