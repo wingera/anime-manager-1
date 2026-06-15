@@ -10,6 +10,7 @@ export interface SourceSite {
   fetch_interval_minutes: number
   hash_pattern: string
   title_cleanup_rules: string
+  scan_detail_pages: boolean
   last_checked_at: string | null
   created_at: string
   updated_at: string
@@ -24,6 +25,7 @@ export interface SourceFormPayload {
   fetch_interval_minutes: number
   hash_pattern: string
   title_cleanup_rules: string
+  scan_detail_pages: boolean
 }
 
 export type SourceUpdatePayload = Partial<SourceFormPayload>
@@ -48,6 +50,31 @@ export interface SourcePreviewItem {
   info_hash: string
   magnet_uri: string
   published_at: string | null
+  resource_group: string | null
+  cover_image_url: string | null
+  page_number: number
+  page_url: string | null
+}
+
+export interface SourcePaginationPage {
+  page_number: number
+  url: string
+}
+
+export interface SourcePagination {
+  current_page: number
+  total_pages: number
+  pages: SourcePaginationPage[]
+}
+
+export interface SourceTestRequest {
+  page_number: number
+}
+
+export interface SourceScanFailure {
+  url: string
+  title: string | null
+  message: string
 }
 
 export interface SourceTestResponse {
@@ -56,6 +83,8 @@ export interface SourceTestResponse {
   found_count: number
   items: SourcePreviewItem[]
   warning_message: string | null
+  pagination: SourcePagination
+  failed_pages: SourceScanFailure[]
 }
 
 export interface SourceItem {

@@ -41,7 +41,13 @@ def test_tmdb_connection(api_key: str | None, language: str) -> ConnectionTestRe
     return ConnectionTestResponse(success=False, message="TMDB 连接失败，请检查 API 密钥")
 
 
-def search_tv(api_key: str, language: str, region: str, query: str) -> list[TmdbTvResult]:
+def search_tv(
+    api_key: str,
+    language: str,
+    region: str,
+    query: str,
+    include_adult: bool,
+) -> list[TmdbTvResult]:
     try:
         response = httpx.get(
             "https://api.themoviedb.org/3/search/tv",
@@ -50,6 +56,7 @@ def search_tv(api_key: str, language: str, region: str, query: str) -> list[Tmdb
                 "language": language,
                 "region": region,
                 "query": query,
+                "include_adult": include_adult,
             },
             timeout=10.0,
         )

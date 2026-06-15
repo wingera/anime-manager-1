@@ -9,6 +9,7 @@ export interface AppSettings {
   download_dir: string
   media_library_dir: string
   matching_threshold: number
+  tmdb_include_adult: boolean
   created_at: string
   updated_at: string
 }
@@ -23,6 +24,7 @@ export interface SettingsUpdateRequest {
   download_dir?: string | null
   media_library_dir?: string | null
   matching_threshold?: number | null
+  tmdb_include_adult?: boolean | null
 }
 
 export interface ConnectionTestResponse {

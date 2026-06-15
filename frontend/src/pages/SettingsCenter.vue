@@ -17,7 +17,8 @@ const form = reactive({
   qbittorrent_password: '',
   download_dir: '/downloads',
   media_library_dir: '/media',
-  matching_threshold: 85
+  matching_threshold: 85,
+  tmdb_include_adult: false
 })
 
 function fillForm(): void {
@@ -33,6 +34,7 @@ function fillForm(): void {
   form.download_dir = settings.download_dir
   form.media_library_dir = settings.media_library_dir
   form.matching_threshold = settings.matching_threshold
+  form.tmdb_include_adult = settings.tmdb_include_adult
 }
 
 async function loadSettings(): Promise<void> {
@@ -52,7 +54,8 @@ function buildPayload(): SettingsUpdateRequest {
     qbittorrent_username: form.qbittorrent_username,
     download_dir: form.download_dir,
     media_library_dir: form.media_library_dir,
-    matching_threshold: form.matching_threshold
+    matching_threshold: form.matching_threshold,
+    tmdb_include_adult: form.tmdb_include_adult
   }
 
   if (form.tmdb_api_key !== '') {
@@ -164,6 +167,17 @@ onMounted(() => {
             <el-input v-model="form.tmdb_region" placeholder="CN" />
           </el-form-item>
         </div>
+        <el-form-item label="成人内容搜索">
+          <el-switch v-model="form.tmdb_include_adult" active-text="允许" inactive-text="不允许" />
+        </el-form-item>
+        <el-alert
+          v-if="form.tmdb_include_adult"
+          class="settings-inline-alert"
+          type="warning"
+          title="开启后 TMDB 搜索会包含成人内容结果，仅影响资料候选搜索。"
+          show-icon
+          :closable="false"
+        />
         <el-button :loading="testingTmdb" @click="testTmdb">测试 TMDB</el-button>
       </el-card>
 
@@ -255,6 +269,10 @@ onMounted(() => {
 }
 
 .settings-alert {
+  margin-bottom: 16px;
+}
+
+.settings-inline-alert {
   margin-bottom: 16px;
 }
 

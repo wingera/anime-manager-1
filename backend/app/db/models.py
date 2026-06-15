@@ -41,6 +41,7 @@ class SourceSite(Base):
     fetch_interval_minutes: Mapped[int] = mapped_column(Integer, default=60, nullable=False)
     hash_pattern: Mapped[str] = mapped_column(Text, default="", nullable=False)
     title_cleanup_rules: Mapped[str] = mapped_column(Text, default="", nullable=False)
+    scan_detail_pages: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
     last_checked_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, nullable=False)
     updated_at: Mapped[datetime] = mapped_column(
@@ -117,6 +118,7 @@ class AppSettings(Base):
     download_dir: Mapped[str] = mapped_column(Text, default="/downloads", nullable=False)
     media_library_dir: Mapped[str] = mapped_column(Text, default="/media", nullable=False)
     matching_threshold: Mapped[int] = mapped_column(Integer, default=85, nullable=False)
+    tmdb_include_adult: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, nullable=False)
     updated_at: Mapped[datetime] = mapped_column(
         DateTime,

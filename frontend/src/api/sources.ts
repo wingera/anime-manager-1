@@ -6,6 +6,7 @@ import type {
   SourceItemListResponse,
   SourceListResponse,
   SourceMessageResponse,
+  SourceTestRequest,
   SourceTestResponse,
   SourceUpdatePayload
 } from '../types/sources'
@@ -62,9 +63,13 @@ export function deleteSource(sourceId: number): Promise<DeleteSourceResponse> {
   })
 }
 
-export function testSource(sourceId: number): Promise<SourceTestResponse> {
+export function testSource(
+  sourceId: number,
+  payload: SourceTestRequest = { page_number: 1 }
+): Promise<SourceTestResponse> {
   return request<SourceTestResponse>(`/sources/${sourceId}/test`, {
-    method: 'POST'
+    method: 'POST',
+    body: JSON.stringify(payload)
   })
 }
 

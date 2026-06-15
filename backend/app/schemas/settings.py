@@ -14,6 +14,7 @@ class SettingsResponse(BaseModel):
     download_dir: str
     media_library_dir: str
     matching_threshold: int
+    tmdb_include_adult: bool
     created_at: datetime
     updated_at: datetime
 
@@ -28,6 +29,7 @@ class SettingsUpdateRequest(BaseModel):
     download_dir: str | None = None
     media_library_dir: str | None = None
     matching_threshold: int | None = Field(default=None, ge=0, le=100)
+    tmdb_include_adult: bool | None = None
 
 
 class ConnectionTestResponse(BaseModel):

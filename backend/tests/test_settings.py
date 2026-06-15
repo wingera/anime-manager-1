@@ -43,6 +43,7 @@ def test_get_settings_returns_default_config(client: TestClient) -> None:
     assert data["download_dir"] == "/downloads"
     assert data["media_library_dir"] == "/media"
     assert data["matching_threshold"] == 85
+    assert data["tmdb_include_adult"] is False
     assert data["has_tmdb_api_key"] is False
     assert data["has_qbittorrent_password"] is False
     assert "tmdb_api_key" not in data
@@ -58,6 +59,7 @@ def test_put_settings_saves_normal_fields(client: TestClient) -> None:
             "download_dir": "/data/downloads",
             "media_library_dir": "/data/media",
             "matching_threshold": 90,
+            "tmdb_include_adult": True,
         },
     )
 
@@ -68,6 +70,7 @@ def test_put_settings_saves_normal_fields(client: TestClient) -> None:
     assert data["download_dir"] == "/data/downloads"
     assert data["media_library_dir"] == "/data/media"
     assert data["matching_threshold"] == 90
+    assert data["tmdb_include_adult"] is True
 
 
 def test_put_settings_does_not_return_sensitive_plaintext(client: TestClient) -> None:

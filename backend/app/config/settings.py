@@ -34,6 +34,7 @@ class Settings(BaseSettings):
             "未授权",
         ]
     )
+    source_detail_scan_max_pages: int = Field(default=20, ge=0, le=50)
 
 
 @lru_cache

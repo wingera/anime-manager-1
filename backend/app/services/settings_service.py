@@ -51,6 +51,7 @@ def to_response(settings: AppSettings) -> SettingsResponse:
         download_dir=settings.download_dir,
         media_library_dir=settings.media_library_dir,
         matching_threshold=settings.matching_threshold,
+        tmdb_include_adult=settings.tmdb_include_adult,
         created_at=settings.created_at,
         updated_at=settings.updated_at,
     )

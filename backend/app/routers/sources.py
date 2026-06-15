@@ -16,6 +16,7 @@ from app.schemas.sources import (
     SourceSiteMessageResponse,
     SourceSiteResponse,
     SourceSiteUpdate,
+    SourceTestRequest,
     SourceTestResponse,
 )
 from app.services.log_service import write_operation_log
@@ -103,10 +104,19 @@ def remove_source(source_id: int, db: DbSession) -> DeleteSourceResponse:
 
 
 @router.post("/api/sources/{source_id}/test", response_model=SourceTestResponse)
-def preview_source(source_id: int, db: DbSession) -> SourceTestResponse:
+def preview_source(
+    source_id: int,
+    db: DbSession,
+    payload: SourceTestRequest | None = None,
+) -> SourceTestResponse:
     source = _get_source_or_404(db, source_id)
+    page_number = payload.page_number if payload is not None else 1
     try:
-        found_count, items, warning_message = test_source(db, source)
+        found_count, items, warning_message, pagination, failed_pages = test_source(
+            db,
+            source,
+            page_number=page_number,
+        )
     except SourceTestError as exc:
         write_operation_log(
             db,
@@ -128,6 +138,8 @@ def preview_source(source_id: int, db: DbSession) -> SourceTestResponse:
         found_count=found_count,
         items=items,
         warning_message=warning_message,
+        pagination=pagination,
+        failed_pages=failed_pages,
     )
 
 

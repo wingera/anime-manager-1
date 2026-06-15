@@ -12,7 +12,9 @@ import type {
   SourceItemImportResponse,
   SourceFormPayload,
   SourceItem,
+  SourcePagination,
   SourcePreviewItem,
+  SourceScanFailure,
   SourceSite,
   SourceTestResponse,
   SourceUpdatePayload
@@ -25,6 +27,8 @@ interface SourcesState {
   previewSourceId: number | null
   previewFoundCount: number
   previewWarningMessage: string | null
+  previewPagination: SourcePagination | null
+  previewFailedPages: SourceScanFailure[]
   loading: boolean
   saving: boolean
   testing: boolean
@@ -43,6 +47,8 @@ export const useSourcesStore = defineStore('sources', {
     previewSourceId: null,
     previewFoundCount: 0,
     previewWarningMessage: null,
+    previewPagination: null,
+    previewFailedPages: [],
     loading: false,
     saving: false,
     testing: false,
@@ -105,6 +111,8 @@ export const useSourcesStore = defineStore('sources', {
           this.previewSourceId = null
           this.previewFoundCount = 0
           this.previewWarningMessage = null
+          this.previewPagination = null
+          this.previewFailedPages = []
           this.previewItems = []
         }
       } catch (error) {
@@ -114,14 +122,16 @@ export const useSourcesStore = defineStore('sources', {
         this.saving = false
       }
     },
-    async testSource(sourceId: number): Promise<SourceTestResponse> {
+    async testSource(sourceId: number, pageNumber = 1): Promise<SourceTestResponse> {
       this.testing = true
       this.errorMessage = ''
       try {
-        const response = await testSource(sourceId)
+        const response = await testSource(sourceId, { page_number: pageNumber })
         this.previewSourceId = response.source_id
         this.previewFoundCount = response.found_count
         this.previewWarningMessage = response.warning_message
+        this.previewPagination = response.pagination
+        this.previewFailedPages = response.failed_pages
         this.previewItems = response.items
         return response
       } catch (error) {

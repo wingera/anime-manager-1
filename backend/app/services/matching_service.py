@@ -69,6 +69,7 @@ def search_tmdb_candidates(db: Session, item: SourceItem) -> list[TmdbCandidate]
         language=settings.tmdb_language,
         region=settings.tmdb_region,
         query=search_title,
+        include_adult=settings.tmdb_include_adult,
     )
     return [
         TmdbCandidate(

@@ -6,7 +6,11 @@ from fastapi import FastAPI
 from app.config.settings import get_settings
 from app.db import models as _models  # noqa: F401
 from app.db.database import Base, engine
-from app.db.schema_compat import prepare_download_tasks_schema
+from app.db.schema_compat import (
+    prepare_app_settings_schema,
+    prepare_download_tasks_schema,
+    prepare_source_sites_schema,
+)
 from app.routers.backup import router as backup_router
 from app.routers.dashboard import router as dashboard_router
 from app.routers.diagnostics import router as diagnostics_router
@@ -28,6 +32,8 @@ settings = get_settings()
 async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
     ensure_secret_key_available()
     prepare_download_tasks_schema(engine)
+    prepare_source_sites_schema(engine)
+    prepare_app_settings_schema(engine)
     Base.metadata.create_all(bind=engine)
     yield
 

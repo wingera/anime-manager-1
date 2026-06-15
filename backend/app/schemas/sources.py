@@ -15,6 +15,7 @@ class SourceSiteBase(BaseModel):
     fetch_interval_minutes: int = Field(default=60, ge=1)
     hash_pattern: str = ""
     title_cleanup_rules: str = ""
+    scan_detail_pages: bool = False
 
 
 class SourceSiteCreate(SourceSiteBase):
@@ -30,6 +31,7 @@ class SourceSiteUpdate(BaseModel):
     fetch_interval_minutes: int | None = Field(default=None, ge=1)
     hash_pattern: str | None = None
     title_cleanup_rules: str | None = None
+    scan_detail_pages: bool | None = None
 
 
 class SourceSiteResponse(SourceSiteBase):
@@ -107,6 +109,31 @@ class SourcePreviewItem(BaseModel):
     info_hash: str
     magnet_uri: str
     published_at: datetime | None
+    resource_group: str | None = None
+    cover_image_url: str | None = None
+    page_number: int = 1
+    page_url: str | None = None
+
+
+class SourcePaginationPage(BaseModel):
+    page_number: int
+    url: str
+
+
+class SourcePagination(BaseModel):
+    current_page: int
+    total_pages: int
+    pages: list[SourcePaginationPage]
+
+
+class SourceScanFailure(BaseModel):
+    url: str
+    title: str | None = None
+    message: str
+
+
+class SourceTestRequest(BaseModel):
+    page_number: int = Field(default=1, ge=1)
 
 
 class SourceTestResponse(BaseModel):
@@ -115,3 +142,5 @@ class SourceTestResponse(BaseModel):
     found_count: int
     items: list[SourcePreviewItem]
     warning_message: str | None
+    pagination: SourcePagination
+    failed_pages: list[SourceScanFailure] = Field(default_factory=list)

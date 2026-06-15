@@ -75,6 +75,47 @@ def test_tmdb_search_requires_api_key(client: TestClient) -> None:
     assert response.json()["detail"] == "请先填写 TMDB API 密钥"
 
 
+def test_tmdb_search_passes_include_adult_setting(
+    client: TestClient,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    item_id = _create_source_item(client)
+    settings_response = client.put(
+        "/api/settings",
+        json={
+            "tmdb_api_key": "secret-tmdb-key",
+            "tmdb_include_adult": True,
+        },
+    )
+    assert settings_response.status_code == 200
+    captured_params: dict[str, object] = {}
+
+    class FakeResponse:
+        def raise_for_status(self) -> None:
+            return None
+
+        def json(self) -> dict[str, object]:
+            return {"results": []}
+
+    def fake_get(
+        url: str,
+        *,
+        params: dict[str, object],
+        timeout: float,
+    ) -> FakeResponse:
+        assert url == "https://api.themoviedb.org/3/search/tv"
+        assert timeout == 10.0
+        captured_params.update(params)
+        return FakeResponse()
+
+    monkeypatch.setattr("app.integrations.tmdb.httpx.get", fake_get)
+
+    response = client.post(f"/api/source-items/{item_id}/tmdb/search")
+
+    assert response.status_code == 200
+    assert captured_params["include_adult"] is True
+
+
 def test_save_match_for_source_item(client: TestClient) -> None:
     item_id = _create_source_item(client)
 
