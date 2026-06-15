@@ -7,6 +7,7 @@ const activeMenu = computed(() => {
   if (route.path.startsWith('/downloads')) return '/downloads'
   if (route.path.startsWith('/analysis')) return '/analysis'
   if (route.path.startsWith('/preview')) return '/preview'
+  if (route.path.startsWith('/rename')) return '/rename'
   if (route.path.startsWith('/imports')) return '/imports'
   if (route.path.startsWith('/logs')) return '/logs'
   if (route.path.startsWith('/resources')) return '/resources'
@@ -31,6 +32,7 @@ const activeMenu = computed(() => {
         <el-menu-item index="/downloads">下载队列</el-menu-item>
         <el-menu-item index="/analysis">文件分析</el-menu-item>
         <el-menu-item index="/preview">命名预览</el-menu-item>
+        <el-menu-item index="/rename">自动重命名</el-menu-item>
         <el-menu-item index="/imports">入库记录</el-menu-item>
         <el-menu-item index="/settings">系统设置</el-menu-item>
         <el-menu-item index="/setup">安装向导</el-menu-item>

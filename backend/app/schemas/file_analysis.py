@@ -27,10 +27,20 @@ class RenamePreviewResponse(BaseModel):
 
     id: int
     download_file_id: int
+    task_id: int | None
+    file_id: str | None
+    parent_id: str | None
+    original_name: str
+    target_name: str
     original_path: str
     target_path: str
+    file_size: int
+    file_type: str
+    episode_number: int | None
+    confidence: int
     conflict: bool
     warning_message: str | None
+    status: str
     created_at: datetime
     updated_at: datetime
 

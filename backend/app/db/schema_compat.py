@@ -64,3 +64,79 @@ def prepare_app_settings_schema(engine: Engine) -> None:
                 "ADD COLUMN tmdb_include_adult BOOLEAN NOT NULL DEFAULT 0"
             )
         )
+
+
+def prepare_rename_schema(engine: Engine) -> None:
+    if engine.dialect.name != "sqlite":
+        return
+
+    inspector = inspect(engine)
+    with engine.begin() as connection:
+        if inspector.has_table("rename_previews"):
+            columns = {column["name"] for column in inspector.get_columns("rename_previews")}
+            additions = {
+                "task_id": "INTEGER",
+                "file_id": "VARCHAR(120)",
+                "parent_id": "VARCHAR(120)",
+                "original_name": "TEXT NOT NULL DEFAULT ''",
+                "target_name": "TEXT NOT NULL DEFAULT ''",
+                "file_size": "INTEGER NOT NULL DEFAULT 0",
+                "file_type": "VARCHAR(40) NOT NULL DEFAULT 'other'",
+                "episode_number": "INTEGER",
+                "confidence": "INTEGER NOT NULL DEFAULT 0",
+                "status": "VARCHAR(40) NOT NULL DEFAULT 'pending'",
+            }
+            for column, definition in additions.items():
+                if column not in columns:
+                    connection.execute(
+                        text(f"ALTER TABLE rename_previews ADD COLUMN {column} {definition}")
+                    )
+
+        if not inspector.has_table("rename_rules"):
+            connection.execute(
+                text(
+                    """
+                    CREATE TABLE rename_rules (
+                        id INTEGER NOT NULL PRIMARY KEY,
+                        enabled BOOLEAN NOT NULL DEFAULT 0,
+                        auto_execute BOOLEAN NOT NULL DEFAULT 0,
+                        name_template TEXT NOT NULL DEFAULT '{clean_title} - {episode}{ext}',
+                        episode_padding INTEGER NOT NULL DEFAULT 2,
+                        remove_words TEXT NOT NULL DEFAULT '',
+                        created_at DATETIME NOT NULL,
+                        updated_at DATETIME NOT NULL
+                    )
+                    """
+                )
+            )
+            connection.execute(text("CREATE INDEX ix_rename_rules_id ON rename_rules (id)"))
+
+        if not inspector.has_table("rename_actions"):
+            connection.execute(
+                text(
+                    """
+                    CREATE TABLE rename_actions (
+                        id INTEGER NOT NULL PRIMARY KEY,
+                        preview_id INTEGER NOT NULL REFERENCES rename_previews (id),
+                        task_id INTEGER NOT NULL REFERENCES download_tasks (id),
+                        file_id VARCHAR(120) NOT NULL,
+                        old_name TEXT NOT NULL,
+                        new_name TEXT NOT NULL,
+                        old_parent_id VARCHAR(120),
+                        new_parent_id VARCHAR(120),
+                        action_type VARCHAR(40) NOT NULL DEFAULT 'rename',
+                        status VARCHAR(40) NOT NULL DEFAULT 'completed',
+                        error_message TEXT,
+                        created_at DATETIME NOT NULL,
+                        updated_at DATETIME NOT NULL
+                    )
+                    """
+                )
+            )
+            connection.execute(text("CREATE INDEX ix_rename_actions_id ON rename_actions (id)"))
+            connection.execute(
+                text("CREATE INDEX ix_rename_actions_preview_id ON rename_actions (preview_id)")
+            )
+            connection.execute(
+                text("CREATE INDEX ix_rename_actions_task_id ON rename_actions (task_id)")
+            )

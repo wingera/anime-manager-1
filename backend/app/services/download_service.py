@@ -104,6 +104,7 @@ def refresh_download_task(db: Session, download_id: int) -> DownloadTaskResponse
         raise LookupError("下载任务不存在")
 
     download, source_item = result
+    previous_status = download.status
     if not download.qbittorrent_hash:
         raise ValueError(HASH_PENDING_MESSAGE)
 
@@ -123,6 +124,16 @@ def refresh_download_task(db: Session, download_id: int) -> DownloadTaskResponse
     db.add(download)
     db.commit()
     db.refresh(download)
+    if download.status == "completed" and previous_status != "completed":
+        try:
+            from app.services.rename_service import handle_download_completed_auto_rename
+
+            handle_download_completed_auto_rename(db, download.id)
+        except Exception as exc:  # noqa: BLE001
+            download.error_message = f"自动重命名失败：{exc}"
+            db.add(download)
+            db.commit()
+            db.refresh(download)
     return _to_response(download, source_item)
 
 

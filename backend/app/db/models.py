@@ -234,10 +234,73 @@ class RenamePreview(Base):
         nullable=False,
         index=True,
     )
+    task_id: Mapped[int | None] = mapped_column(Integer, index=True, nullable=True)
+    file_id: Mapped[str | None] = mapped_column(String(120), nullable=True)
+    parent_id: Mapped[str | None] = mapped_column(String(120), nullable=True)
+    original_name: Mapped[str] = mapped_column(Text, default="", nullable=False)
+    target_name: Mapped[str] = mapped_column(Text, default="", nullable=False)
     original_path: Mapped[str] = mapped_column(Text, nullable=False)
     target_path: Mapped[str] = mapped_column(Text, nullable=False)
+    file_size: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    file_type: Mapped[str] = mapped_column(String(40), default="other", nullable=False)
+    episode_number: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    confidence: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
     conflict: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
     warning_message: Mapped[str | None] = mapped_column(Text, nullable=True)
+    status: Mapped[str] = mapped_column(String(40), default="pending", nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, nullable=False)
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime,
+        default=datetime.utcnow,
+        onupdate=datetime.utcnow,
+        nullable=False,
+    )
+
+
+class RenameRule(Base):
+    __tablename__ = "rename_rules"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
+    enabled: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    auto_execute: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    name_template: Mapped[str] = mapped_column(
+        Text,
+        default="{clean_title} - {episode}{ext}",
+        nullable=False,
+    )
+    episode_padding: Mapped[int] = mapped_column(Integer, default=2, nullable=False)
+    remove_words: Mapped[str] = mapped_column(Text, default="", nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, nullable=False)
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime,
+        default=datetime.utcnow,
+        onupdate=datetime.utcnow,
+        nullable=False,
+    )
+
+
+class RenameAction(Base):
+    __tablename__ = "rename_actions"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
+    preview_id: Mapped[int] = mapped_column(
+        ForeignKey("rename_previews.id"),
+        nullable=False,
+        index=True,
+    )
+    task_id: Mapped[int] = mapped_column(
+        ForeignKey("download_tasks.id"),
+        nullable=False,
+        index=True,
+    )
+    file_id: Mapped[str] = mapped_column(String(120), nullable=False)
+    old_name: Mapped[str] = mapped_column(Text, nullable=False)
+    new_name: Mapped[str] = mapped_column(Text, nullable=False)
+    old_parent_id: Mapped[str | None] = mapped_column(String(120), nullable=True)
+    new_parent_id: Mapped[str | None] = mapped_column(String(120), nullable=True)
+    action_type: Mapped[str] = mapped_column(String(40), default="rename", nullable=False)
+    status: Mapped[str] = mapped_column(String(40), default="completed", nullable=False)
+    error_message: Mapped[str | None] = mapped_column(Text, nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, nullable=False)
     updated_at: Mapped[datetime] = mapped_column(
         DateTime,

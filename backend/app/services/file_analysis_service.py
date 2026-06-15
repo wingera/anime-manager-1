@@ -254,10 +254,20 @@ def generate_rename_previews(db: Session, download_id: int) -> list[RenamePrevie
         target_paths.append(target_path)
         preview = RenamePreview(
             download_file_id=download_file.id,
+            task_id=download_id,
+            file_id=str(download_file.file_index),
+            parent_id=None,
+            original_name=Path(download_file.name).name,
+            target_name=Path(target_path).name,
             original_path=download_file.name,
             target_path=target_path,
+            file_size=download_file.size,
+            file_type=download_file.file_type,
+            episode_number=episode_number,
+            confidence=90 if episode_number is not None else 50,
             conflict=False,
             warning_message=None,
+            status="pending",
         )
         db.add(preview)
         previews.append(preview)
@@ -289,10 +299,20 @@ def generate_rename_previews(db: Session, download_id: int) -> list[RenamePrevie
         target_paths.append(target_path)
         preview = RenamePreview(
             download_file_id=download_file.id,
+            task_id=download_id,
+            file_id=str(download_file.file_index),
+            parent_id=None,
+            original_name=Path(download_file.name).name,
+            target_name=Path(target_path).name,
             original_path=download_file.name,
             target_path=target_path,
+            file_size=download_file.size,
+            file_type=download_file.file_type,
+            episode_number=episode_number,
+            confidence=90 if episode_number is not None else 50,
             conflict=False,
             warning_message=warning_message,
+            status="pending",
         )
         db.add(preview)
         previews.append(preview)

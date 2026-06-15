@@ -79,6 +79,10 @@ function openRenamePreview(download: DownloadTask): void {
   void router.push({ path: '/preview', query: { download_id: download.id } })
 }
 
+function openAutoRename(download: DownloadTask): void {
+  void router.push({ path: '/rename', query: { download_id: download.id } })
+}
+
 onMounted(() => {
   void loadDownloads()
 })
@@ -157,6 +161,9 @@ onMounted(() => {
           </el-button>
           <el-button type="success" plain @click="openRenamePreview(download)">
             命名预览
+          </el-button>
+          <el-button type="warning" plain @click="openAutoRename(download)">
+            自动重命名
           </el-button>
           <el-button
             type="danger"

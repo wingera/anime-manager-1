@@ -20,10 +20,20 @@ export interface DownloadFile {
 export interface RenamePreview {
   id: number
   download_file_id: number
+  task_id: number | null
+  file_id: string | null
+  parent_id: string | null
+  original_name: string
+  target_name: string
   original_path: string
   target_path: string
+  file_size: number
+  file_type: DownloadFileType
+  episode_number: number | null
+  confidence: number
   conflict: boolean
   warning_message: string | null
+  status: string
   created_at: string
   updated_at: string
 }

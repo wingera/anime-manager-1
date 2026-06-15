@@ -55,6 +55,11 @@ const router = createRouter({
       component: () => import('../pages/RenamePreview.vue')
     },
     {
+      path: '/rename',
+      name: 'rename',
+      component: () => import('../pages/AutoRename.vue')
+    },
+    {
       path: '/imports',
       name: 'imports',
       component: () => import('../pages/ImportRecords.vue')
