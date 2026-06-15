@@ -13,6 +13,10 @@ class BackupSettings(BaseModel):
     qbittorrent_url: str | None = None
     qbittorrent_username: str | None = None
     has_qbittorrent_password: bool = False
+    download_provider: str = "qbittorrent"
+    cloud115_enabled: bool = False
+    cloud115_service_url: str | None = "http://192.168.1.19:9527"
+    has_cloud115_service_token: bool = False
     download_dir: str = Field(min_length=1)
     media_library_dir: str = Field(min_length=1)
     matching_threshold: int = Field(ge=0, le=100)

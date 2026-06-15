@@ -51,3 +51,9 @@ export function testQbittorrent(): Promise<ConnectionTestResponse> {
     method: 'POST'
   })
 }
+
+export function testNas115(): Promise<ConnectionTestResponse> {
+  return request<ConnectionTestResponse>('/settings/test-nas115', {
+    method: 'POST'
+  })
+}

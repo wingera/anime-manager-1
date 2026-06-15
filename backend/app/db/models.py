@@ -115,6 +115,18 @@ class AppSettings(Base):
     qbittorrent_url: Mapped[str | None] = mapped_column(Text, nullable=True)
     qbittorrent_username: Mapped[str | None] = mapped_column(String(255), nullable=True)
     qbittorrent_password: Mapped[str | None] = mapped_column(Text, nullable=True)
+    download_provider: Mapped[str] = mapped_column(
+        String(40),
+        default="qbittorrent",
+        nullable=False,
+    )
+    cloud115_enabled: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    cloud115_service_url: Mapped[str] = mapped_column(
+        Text,
+        default="http://192.168.1.19:9527",
+        nullable=False,
+    )
+    cloud115_service_token: Mapped[str | None] = mapped_column(Text, nullable=True)
     download_dir: Mapped[str] = mapped_column(Text, default="/downloads", nullable=False)
     media_library_dir: Mapped[str] = mapped_column(Text, default="/media", nullable=False)
     matching_threshold: Mapped[int] = mapped_column(Integer, default=85, nullable=False)
@@ -177,6 +189,8 @@ class DownloadTask(Base):
         index=True,
     )
     qbittorrent_hash: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    provider: Mapped[str] = mapped_column(String(40), default="qbittorrent", nullable=False)
+    provider_task_id: Mapped[str | None] = mapped_column(String(120), nullable=True)
     magnet_uri: Mapped[str] = mapped_column(Text, nullable=False)
     save_path: Mapped[str] = mapped_column(Text, default="/downloads", nullable=False)
     status: Mapped[str] = mapped_column(String(40), default="pending", nullable=False)
@@ -204,6 +218,8 @@ class DownloadFile(Base):
         index=True,
     )
     file_index: Mapped[int] = mapped_column(Integer, nullable=False)
+    provider_file_id: Mapped[str | None] = mapped_column(String(120), nullable=True)
+    parent_id: Mapped[str | None] = mapped_column(String(120), nullable=True)
     name: Mapped[str] = mapped_column(Text, nullable=False)
     size: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
     progress: Mapped[float] = mapped_column(Float, default=0, nullable=False)

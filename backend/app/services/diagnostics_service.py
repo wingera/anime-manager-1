@@ -6,8 +6,10 @@ from sqlalchemy import text
 from sqlalchemy.orm import Session
 
 from app.config.settings import get_settings
+from app.integrations.nas115 import test_nas115_connection
 from app.schemas.diagnostics import DiagnosticCheck, DiagnosticsResponse, DiagnosticStatus
 from app.services.settings_service import get_or_create_settings
+from app.utils.secrets import decrypt_secret
 
 
 def _check_writable_directory(name: str, path: Path, *, must_exist: bool) -> DiagnosticCheck:
@@ -56,6 +58,27 @@ def run_diagnostics(db: Session) -> DiagnosticsResponse:
                 name="qBittorrent 配置",
                 status="warning",
                 message="qBittorrent 地址、用户名或密码未完整配置",
+            )
+        )
+
+    if settings.cloud115_enabled:
+        result = test_nas115_connection(
+            settings.cloud115_service_url,
+            decrypt_secret(settings.cloud115_service_token),
+        )
+        checks.append(
+            DiagnosticCheck(
+                name="NAS 115 服务",
+                status="ok" if result.success else "warning",
+                message=result.message,
+            )
+        )
+    else:
+        checks.append(
+            DiagnosticCheck(
+                name="NAS 115 服务",
+                status="warning",
+                message="NAS 115 服务未启用",
             )
         )
 

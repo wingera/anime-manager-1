@@ -92,12 +92,12 @@ def update_file(
 )
 def apply_priority(download_id: int, db: DbSession) -> SimpleMessageResponse:
     try:
-        apply_file_priority(db, download_id)
+        _files, message = apply_file_priority(db, download_id)
     except LookupError as exc:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc)) from exc
     except ValueError as exc:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
-    return SimpleMessageResponse(message="文件优先级已应用")
+    return SimpleMessageResponse(message=message)
 
 
 @router.get("/api/downloads/{download_id}/rename-preview", response_model=RenamePreviewListResponse)

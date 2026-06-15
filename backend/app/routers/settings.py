@@ -4,6 +4,7 @@ from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 
 from app.db.database import get_db
+from app.integrations.nas115 import test_nas115_connection
 from app.integrations.qbittorrent import test_qbittorrent_connection
 from app.integrations.tmdb import test_tmdb_connection
 from app.schemas.settings import ConnectionTestResponse, SettingsResponse, SettingsUpdateRequest
@@ -52,4 +53,13 @@ def test_qbittorrent(db: DbSession) -> ConnectionTestResponse:
         settings.qbittorrent_url,
         settings.qbittorrent_username,
         decrypt_secret(settings.qbittorrent_password),
+    )
+
+
+@router.post("/test-nas115", response_model=ConnectionTestResponse)
+def test_nas115(db: DbSession) -> ConnectionTestResponse:
+    settings = get_or_create_settings(db)
+    return test_nas115_connection(
+        settings.cloud115_service_url,
+        decrypt_secret(settings.cloud115_service_token),
     )

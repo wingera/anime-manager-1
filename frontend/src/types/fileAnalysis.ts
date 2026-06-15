@@ -4,6 +4,8 @@ export interface DownloadFile {
   id: number
   download_task_id: number
   file_index: number
+  provider_file_id: string | null
+  parent_id: string | null
   name: string
   size: number
   progress: number

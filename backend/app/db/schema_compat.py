@@ -53,17 +53,51 @@ def prepare_app_settings_schema(engine: Engine) -> None:
     if not inspector.has_table("app_settings"):
         return
 
-    columns = {column["name"] for column in inspector.get_columns("app_settings")}
-    if "tmdb_include_adult" in columns:
+    with engine.begin() as connection:
+        columns = {column["name"] for column in inspector.get_columns("app_settings")}
+        additions = {
+            "tmdb_include_adult": "BOOLEAN NOT NULL DEFAULT 0",
+            "download_provider": "VARCHAR(40) NOT NULL DEFAULT 'qbittorrent'",
+            "cloud115_enabled": "BOOLEAN NOT NULL DEFAULT 0",
+            "cloud115_service_url": "TEXT NOT NULL DEFAULT 'http://192.168.1.19:9527'",
+            "cloud115_service_token": "TEXT",
+        }
+        for column, definition in additions.items():
+            if column not in columns:
+                connection.execute(
+                    text(f"ALTER TABLE app_settings ADD COLUMN {column} {definition}")
+                )
+
+
+def prepare_provider_schema(engine: Engine) -> None:
+    if engine.dialect.name != "sqlite":
         return
 
+    inspector = inspect(engine)
     with engine.begin() as connection:
-        connection.execute(
-            text(
-                "ALTER TABLE app_settings "
-                "ADD COLUMN tmdb_include_adult BOOLEAN NOT NULL DEFAULT 0"
-            )
-        )
+        if inspector.has_table("download_tasks"):
+            task_columns = {column["name"] for column in inspector.get_columns("download_tasks")}
+            task_additions = {
+                "provider": "VARCHAR(40) NOT NULL DEFAULT 'qbittorrent'",
+                "provider_task_id": "VARCHAR(120)",
+            }
+            for column, definition in task_additions.items():
+                if column not in task_columns:
+                    connection.execute(
+                        text(f"ALTER TABLE download_tasks ADD COLUMN {column} {definition}")
+                    )
+
+        if inspector.has_table("download_files"):
+            file_columns = {column["name"] for column in inspector.get_columns("download_files")}
+            file_additions = {
+                "provider_file_id": "VARCHAR(120)",
+                "parent_id": "VARCHAR(120)",
+            }
+            for column, definition in file_additions.items():
+                if column not in file_columns:
+                    connection.execute(
+                        text(f"ALTER TABLE download_files ADD COLUMN {column} {definition}")
+                    )
 
 
 def prepare_rename_schema(engine: Engine) -> None:

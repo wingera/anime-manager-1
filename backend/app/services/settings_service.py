@@ -23,12 +23,12 @@ def update_settings(db: Session, payload: SettingsUpdateRequest) -> AppSettings:
     data = payload.model_dump(exclude_unset=True)
 
     for field, value in data.items():
-        if field in {"tmdb_api_key", "qbittorrent_password"}:
+        if field in {"tmdb_api_key", "qbittorrent_password", "cloud115_service_token"}:
             setattr(settings, field, encrypt_secret(None if value == "" else value))
             continue
         setattr(settings, field, value)
 
-    for field in ("tmdb_api_key", "qbittorrent_password"):
+    for field in ("tmdb_api_key", "qbittorrent_password", "cloud115_service_token"):
         current_value = getattr(settings, field)
         if current_value and not is_encrypted_secret(current_value):
             setattr(settings, field, encrypt_secret(decrypt_secret(current_value)))
@@ -48,6 +48,10 @@ def to_response(settings: AppSettings) -> SettingsResponse:
         qbittorrent_url=settings.qbittorrent_url,
         qbittorrent_username=settings.qbittorrent_username,
         has_qbittorrent_password=bool(settings.qbittorrent_password),
+        download_provider=settings.download_provider,
+        cloud115_enabled=settings.cloud115_enabled,
+        cloud115_service_url=settings.cloud115_service_url,
+        has_cloud115_service_token=bool(settings.cloud115_service_token),
         download_dir=settings.download_dir,
         media_library_dir=settings.media_library_dir,
         matching_threshold=settings.matching_threshold,

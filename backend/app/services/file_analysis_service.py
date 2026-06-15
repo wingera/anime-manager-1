@@ -6,8 +6,13 @@ from sqlalchemy import delete, select
 from sqlalchemy.orm import Session
 
 from app.db.models import AppSettings, DownloadFile, DownloadTask, MediaMatch, RenamePreview
+from app.integrations.nas115 import list_task_files as list_nas115_task_files
 from app.integrations.qbittorrent import get_torrent_files, set_file_priority
-from app.services.download_service import HASH_PENDING_MESSAGE, QB_NOT_CONFIGURED_MESSAGE
+from app.services.download_service import (
+    HASH_PENDING_MESSAGE,
+    NAS115_NOT_CONFIGURED_MESSAGE,
+    QB_NOT_CONFIGURED_MESSAGE,
+)
 from app.services.settings_service import get_or_create_settings
 from app.utils.emby_naming import build_target_path
 from app.utils.file_analyzer import (
@@ -21,6 +26,7 @@ from app.utils.secrets import decrypt_secret
 
 MATCH_REQUIRED_MESSAGE = "请先确认资料匹配。"
 HASH_PENDING_ANALYSIS_MESSAGE = f"{HASH_PENDING_MESSAGE}。"
+NAS115_PRIORITY_MESSAGE = "115 网盘模式不需要设置下载器文件优先级，已保存文件选择。"
 
 
 def _settings_credentials(settings: AppSettings) -> tuple[str, str, str]:
@@ -28,6 +34,12 @@ def _settings_credentials(settings: AppSettings) -> tuple[str, str, str]:
     if not settings.qbittorrent_url or not settings.qbittorrent_username or not password:
         raise ValueError(QB_NOT_CONFIGURED_MESSAGE)
     return settings.qbittorrent_url, settings.qbittorrent_username, password
+
+
+def _nas115_credentials(settings: AppSettings) -> tuple[str, str | None]:
+    if not settings.cloud115_enabled or not settings.cloud115_service_url:
+        raise ValueError(NAS115_NOT_CONFIGURED_MESSAGE)
+    return settings.cloud115_service_url, decrypt_secret(settings.cloud115_service_token)
 
 
 def _download_or_404(db: Session, download_id: int) -> DownloadTask:
@@ -48,6 +60,16 @@ def _to_float(value: object, default: float = 0.0) -> float:
 def _file_name(data: dict[str, object]) -> str:
     name = data.get("name")
     return str(name) if name is not None else ""
+
+
+def _file_id(data: dict[str, object]) -> str | None:
+    value = data.get("id") or data.get("file_id") or data.get("fid")
+    return str(value) if value is not None else None
+
+
+def _parent_id(data: dict[str, object]) -> str | None:
+    value = data.get("parent_id") or data.get("pid") or data.get("cid")
+    return str(value) if value is not None else None
 
 
 def _selected_by_default(
@@ -80,17 +102,27 @@ def list_download_files(db: Session, download_id: int) -> list[DownloadFile]:
 
 def analyze_download_files(db: Session, download_id: int) -> list[DownloadFile]:
     download = _download_or_404(db, download_id)
-    if not download.qbittorrent_hash:
-        raise ValueError(HASH_PENDING_ANALYSIS_MESSAGE)
 
     settings = get_or_create_settings(db)
-    url, username, password = _settings_credentials(settings)
-    raw_files = get_torrent_files(
-        url=url,
-        username=username,
-        password=password,
-        torrent_hash=download.qbittorrent_hash,
-    )
+    if download.provider == "nas115":
+        if not download.provider_task_id:
+            raise ValueError("NAS 115 服务尚未返回任务编号，请稍后分析")
+        service_url, token = _nas115_credentials(settings)
+        raw_files = list_nas115_task_files(
+            service_url=service_url,
+            token=token,
+            task_id=download.provider_task_id,
+        )
+    else:
+        if not download.qbittorrent_hash:
+            raise ValueError(HASH_PENDING_ANALYSIS_MESSAGE)
+        url, username, password = _settings_credentials(settings)
+        raw_files = get_torrent_files(
+            url=url,
+            username=username,
+            password=password,
+            torrent_hash=download.qbittorrent_hash,
+        )
     video_sizes = [
         _to_int(data.get("size"))
         for data in raw_files
@@ -124,6 +156,9 @@ def analyze_download_files(db: Session, download_id: int) -> list[DownloadFile]:
         download_file.size = size
         download_file.progress = progress
         download_file.priority = priority
+        if download.provider == "nas115":
+            download_file.provider_file_id = _file_id(data)
+            download_file.parent_id = _parent_id(data)
         download_file.file_type = file_type
         download_file.selected = selected
         download_file.analysis_score = score_download_file(name, size)
@@ -151,8 +186,16 @@ def update_download_file(db: Session, file_id: int, data: dict[str, Any]) -> Dow
     return download_file
 
 
-def apply_file_priority(db: Session, download_id: int) -> list[DownloadFile]:
+def apply_file_priority(db: Session, download_id: int) -> tuple[list[DownloadFile], str]:
     download = _download_or_404(db, download_id)
+    if download.provider == "nas115":
+        files = list_download_files(db, download_id)
+        for download_file in files:
+            download_file.priority = 1 if download_file.selected else 0
+            db.add(download_file)
+        db.commit()
+        return list_download_files(db, download_id), NAS115_PRIORITY_MESSAGE
+
     if not download.qbittorrent_hash:
         raise ValueError(HASH_PENDING_ANALYSIS_MESSAGE)
 
@@ -181,7 +224,7 @@ def apply_file_priority(db: Session, download_id: int) -> list[DownloadFile]:
         download_file.priority = 1 if download_file.selected else 0
         db.add(download_file)
     db.commit()
-    return list_download_files(db, download_id)
+    return list_download_files(db, download_id), "文件优先级已应用"
 
 
 def list_rename_previews(db: Session, download_id: int) -> list[RenamePreview]:

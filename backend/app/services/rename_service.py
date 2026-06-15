@@ -13,13 +13,26 @@ from app.db.models import (
     RenameRule,
     SourceItem,
 )
+from app.integrations.nas115 import (
+    NAS115_CAPABILITY_MISSING_MESSAGE,
+)
+from app.integrations.nas115 import (
+    check_name_exists as check_nas115_name_exists,
+)
+from app.integrations.nas115 import (
+    rename_file as rename_nas115_file,
+)
+from app.services.settings_service import get_or_create_settings
 from app.utils.rename_parser import build_target_name, classify_rename_file, extract_episode_number
+from app.utils.secrets import decrypt_secret
 
 MISSING_115_RENAME_MESSAGE = "当前项目未发现可用的 115 重命名能力。"
 LOW_CONFIDENCE_MESSAGE = "未能识别集数，请人工确认。"
 CONFLICT_MESSAGE = "目标文件名已存在，不能覆盖。"
 DEFAULT_TEMPLATE = "{clean_title} - {episode}{ext}"
 SAFE_CONFIDENCE = 60
+NAS115_NOT_CONFIGURED_MESSAGE = "请先启用并填写 NAS 115 服务地址"
+UNSAFE_ROLLBACK_MESSAGE = "无法安全自动回滚，请在 115 网盘中手动检查。"
 
 
 def rename_115_file(*, file_id: str, new_name: str) -> None:
@@ -129,7 +142,7 @@ def generate_previews(db: Session, download_id: int) -> list[RenamePreview]:
         preview = RenamePreview(
             download_file_id=download_file.id,
             task_id=download_id,
-            file_id=str(download_file.file_index),
+            file_id=download_file.provider_file_id or str(download_file.file_index),
             parent_id=parent_id,
             original_name=Path(download_file.name).name,
             target_name=target_name,
@@ -153,10 +166,15 @@ def generate_previews(db: Session, download_id: int) -> list[RenamePreview]:
 
 
 def apply_rename(db: Session, download_id: int) -> list[RenameAction]:
+    download = _download_or_404(db, download_id)
+    nas115_context = _nas115_context(db, download) if download.provider == "nas115" else None
     previews = list_previews(db, download_id)
     actions: list[RenameAction] = []
     for preview in previews:
         if preview.conflict or preview.confidence < SAFE_CONFIDENCE or preview.status == "renamed":
+            continue
+        download_file = db.get(DownloadFile, preview.download_file_id)
+        if download_file is None or not download_file.selected:
             continue
         action = RenameAction(
             preview_id=preview.id,
@@ -171,7 +189,21 @@ def apply_rename(db: Session, download_id: int) -> list[RenameAction]:
             error_message=None,
         )
         try:
-            rename_115_file(file_id=action.file_id, new_name=action.new_name)
+            if nas115_context is None:
+                rename_115_file(file_id=action.file_id, new_name=action.new_name)
+            else:
+                service_url, token = nas115_context
+                if _nas115_name_exists(service_url, token, action.new_parent_id, action.new_name):
+                    preview.conflict = True
+                    preview.warning_message = CONFLICT_MESSAGE
+                    db.add(preview)
+                    continue
+                rename_nas115_file(
+                    service_url=service_url,
+                    token=token,
+                    file_id=action.file_id,
+                    new_name=action.new_name,
+                )
             preview.status = "renamed"
         except Exception as exc:  # noqa: BLE001
             action.status = "failed"
@@ -192,12 +224,22 @@ def rollback_action(db: Session, action_id: int) -> RenameAction:
     if action is None:
         raise LookupError("重命名动作不存在")
     if action.status != "completed":
-        raise ValueError("无法安全自动回滚，请在 115 网盘中手动检查。")
+        raise ValueError(UNSAFE_ROLLBACK_MESSAGE)
     try:
-        rename_115_file(file_id=action.file_id, new_name=action.old_name)
+        download = db.get(DownloadTask, action.task_id)
+        if download is not None and download.provider == "nas115":
+            service_url, token = _nas115_context(db, download)
+            rename_nas115_file(
+                service_url=service_url,
+                token=token,
+                file_id=action.file_id,
+                new_name=action.old_name,
+            )
+        else:
+            rename_115_file(file_id=action.file_id, new_name=action.old_name)
     except Exception as exc:  # noqa: BLE001
         action.status = "failed"
-        action.error_message = "无法安全自动回滚，请在 115 网盘中手动检查。"
+        action.error_message = UNSAFE_ROLLBACK_MESSAGE
         db.add(action)
         db.commit()
         raise ValueError(action.error_message) from exc
@@ -257,6 +299,32 @@ def _download_or_404(db: Session, download_id: int) -> DownloadTask:
     if download is None:
         raise LookupError("下载任务不存在")
     return download
+
+
+def _nas115_context(db: Session, download: DownloadTask) -> tuple[str, str | None]:
+    settings = get_or_create_settings(db)
+    if not settings.cloud115_enabled or not settings.cloud115_service_url:
+        raise ValueError(NAS115_NOT_CONFIGURED_MESSAGE)
+    return settings.cloud115_service_url, decrypt_secret(settings.cloud115_service_token)
+
+
+def _nas115_name_exists(
+    service_url: str,
+    token: str | None,
+    parent_id: str | None,
+    name: str,
+) -> bool:
+    try:
+        return check_nas115_name_exists(
+            service_url=service_url,
+            token=token,
+            parent_id=parent_id,
+            name=name,
+        )
+    except ValueError as exc:
+        if str(exc) == NAS115_CAPABILITY_MISSING_MESSAGE:
+            return False
+        raise
 
 
 def _file_type(download_file: DownloadFile) -> str:

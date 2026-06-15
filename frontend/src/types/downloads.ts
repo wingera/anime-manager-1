@@ -3,6 +3,8 @@ export interface DownloadTask {
   source_item_id: number
   source_title: string
   qbittorrent_hash: string | null
+  provider: 'qbittorrent' | 'nas115'
+  provider_task_id: string | null
   magnet_uri: string
   save_path: string
   status: string

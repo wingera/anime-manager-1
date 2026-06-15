@@ -2,12 +2,21 @@
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { computed, onMounted, reactive } from 'vue'
 import { useRoute } from 'vue-router'
+import { useDownloadsStore } from '../stores/downloads'
 import { useRenameStore } from '../stores/rename'
 import type { RenameRuleUpdateRequest } from '../types/rename'
 
 const route = useRoute()
 const renameStore = useRenameStore()
+const downloadsStore = useDownloadsStore()
 const taskId = computed(() => Number(route.query.download_id ?? 0))
+const currentDownload = computed(() =>
+  downloadsStore.downloads.find((download) => download.id === taskId.value)
+)
+const isNas115Task = computed(() => currentDownload.value?.provider === 'nas115')
+const applyButtonText = computed(() =>
+  isNas115Task.value ? '执行 115 网盘重命名' : '执行重命名'
+)
 
 const form = reactive({
   enabled: false,
@@ -52,6 +61,7 @@ function previewStatusLabel(status: string): string {
 async function loadPage(): Promise<void> {
   try {
     await renameStore.fetchRule()
+    await downloadsStore.fetchDownloads()
     fillRuleForm()
     if (taskId.value) await renameStore.fetchTask(taskId.value)
   } catch (error) {
@@ -99,11 +109,15 @@ async function applyRename(): Promise<void> {
     return
   }
   try {
-    await ElMessageBox.confirm('确认执行无冲突且可信度达标的重命名预览？', '执行重命名', {
-      confirmButtonText: '执行',
-      cancelButtonText: '取消',
-      type: 'warning'
-    })
+    await ElMessageBox.confirm(
+      '确认执行无冲突且可信度达标的重命名预览？',
+      applyButtonText.value,
+      {
+        confirmButtonText: '执行',
+        cancelButtonText: '取消',
+        type: 'warning'
+      }
+    )
     await renameStore.applyRename(taskId.value)
     ElMessage.success('重命名执行完成')
   } catch (error) {
@@ -160,6 +174,15 @@ onMounted(() => {
       class="rename-alert"
       type="warning"
       title="当前项目未发现稳定的 115 重命名客户端时，执行会记录失败原因，不会删除或覆盖文件。"
+      show-icon
+      :closable="false"
+    />
+
+    <el-alert
+      v-if="isNas115Task"
+      class="rename-alert"
+      type="info"
+      title="该操作会调用 NAS 上的 115 服务重命名网盘文件，不会删除文件。"
       show-icon
       :closable="false"
     />
@@ -224,7 +247,7 @@ onMounted(() => {
             :loading="renameStore.applying"
             @click="applyRename"
           >
-            执行重命名
+            {{ applyButtonText }}
           </el-button>
           <el-button :disabled="!taskId" :loading="renameStore.applying" @click="runAutoRenameNow">
             手动触发自动流程

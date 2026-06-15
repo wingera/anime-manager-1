@@ -10,6 +10,8 @@ class DownloadTaskResponse(BaseModel):
     source_item_id: int
     source_title: str
     qbittorrent_hash: str | None
+    provider: str
+    provider_task_id: str | None
     magnet_uri: str
     save_path: str
     status: str

@@ -9,6 +9,8 @@ class DownloadFileResponse(BaseModel):
     id: int
     download_task_id: int
     file_index: int
+    provider_file_id: str | None
+    parent_id: str | None
     name: str
     size: int
     progress: float

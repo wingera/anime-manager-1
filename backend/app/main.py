@@ -9,6 +9,7 @@ from app.db.database import Base, engine
 from app.db.schema_compat import (
     prepare_app_settings_schema,
     prepare_download_tasks_schema,
+    prepare_provider_schema,
     prepare_rename_schema,
     prepare_source_sites_schema,
 )
@@ -36,6 +37,7 @@ async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
     prepare_download_tasks_schema(engine)
     prepare_source_sites_schema(engine)
     prepare_app_settings_schema(engine)
+    prepare_provider_schema(engine)
     prepare_rename_schema(engine)
     Base.metadata.create_all(bind=engine)
     yield

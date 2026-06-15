@@ -39,6 +39,21 @@ function getProgressPercent(progress: number): number {
   return Math.round(Math.max(0, Math.min(progress, 1)) * 100)
 }
 
+function getProviderLabel(download: DownloadTask): string {
+  return download.provider === 'nas115' ? 'NAS 115' : 'qBittorrent'
+}
+
+function getTaskIdentifierLabel(download: DownloadTask): string {
+  return download.provider === 'nas115' ? 'NAS 115 任务编号' : '任务哈希'
+}
+
+function getTaskIdentifier(download: DownloadTask): string {
+  if (download.provider === 'nas115') {
+    return download.provider_task_id || 'NAS 115 尚未返回任务编号'
+  }
+  return download.qbittorrent_hash || '下载器尚未返回任务哈希'
+}
+
 async function loadDownloads(): Promise<void> {
   try {
     await downloadsStore.fetchDownloads()
@@ -93,7 +108,7 @@ onMounted(() => {
     <div class="page-heading">
       <div>
         <h2>下载队列</h2>
-        <p>查看已手动创建的下载任务，任务提交到 qBittorrent 后会保持暂停。</p>
+        <p>查看已手动创建的下载任务，按设置提交到 qBittorrent 或 NAS 115 服务。</p>
       </div>
       <el-button :loading="downloadsStore.loading" @click="loadDownloads">刷新</el-button>
     </div>
@@ -126,6 +141,10 @@ onMounted(() => {
 
           <dl class="download-meta">
             <div>
+              <dt>下载器类型</dt>
+              <dd>{{ getProviderLabel(download) }}</dd>
+            </div>
+            <div>
               <dt>磁力入口</dt>
               <dd>{{ download.magnet_uri }}</dd>
             </div>
@@ -134,8 +153,8 @@ onMounted(() => {
               <dd>{{ download.save_path }}</dd>
             </div>
             <div>
-              <dt>任务哈希</dt>
-              <dd>{{ download.qbittorrent_hash || '下载器尚未返回任务哈希' }}</dd>
+              <dt>{{ getTaskIdentifierLabel(download) }}</dt>
+              <dd>{{ getTaskIdentifier(download) }}</dd>
             </div>
             <div>
               <dt>错误信息</dt>

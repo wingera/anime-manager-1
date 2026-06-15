@@ -1,6 +1,7 @@
 import { defineStore } from 'pinia'
 import {
   getSettings,
+  testNas115 as requestNas115Test,
   testQbittorrent as requestQbittorrentTest,
   testTmdb as requestTmdbTest,
   updateSettings
@@ -63,6 +64,15 @@ export const useSettingsStore = defineStore('settings', {
       this.errorMessage = ''
       try {
         return await requestQbittorrentTest()
+      } catch (error) {
+        this.errorMessage = getErrorMessage(error)
+        throw error
+      }
+    },
+    async testNas115(): Promise<ConnectionTestResponse> {
+      this.errorMessage = ''
+      try {
+        return await requestNas115Test()
       } catch (error) {
         this.errorMessage = getErrorMessage(error)
         throw error

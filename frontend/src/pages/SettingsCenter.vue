@@ -7,6 +7,7 @@ import type { ConnectionTestResponse, SettingsUpdateRequest } from '../types/set
 const settingsStore = useSettingsStore()
 const testingTmdb = ref(false)
 const testingQbittorrent = ref(false)
+const testingNas115 = ref(false)
 
 const form = reactive({
   tmdb_api_key: '',
@@ -15,6 +16,10 @@ const form = reactive({
   qbittorrent_url: '',
   qbittorrent_username: '',
   qbittorrent_password: '',
+  download_provider: 'qbittorrent' as 'qbittorrent' | 'nas115',
+  cloud115_enabled: false,
+  cloud115_service_url: 'http://192.168.1.19:9527',
+  cloud115_service_token: '',
   download_dir: '/downloads',
   media_library_dir: '/media',
   matching_threshold: 85,
@@ -31,6 +36,10 @@ function fillForm(): void {
   form.qbittorrent_url = settings.qbittorrent_url ?? ''
   form.qbittorrent_username = settings.qbittorrent_username ?? ''
   form.qbittorrent_password = ''
+  form.download_provider = settings.download_provider
+  form.cloud115_enabled = settings.cloud115_enabled
+  form.cloud115_service_url = settings.cloud115_service_url ?? 'http://192.168.1.19:9527'
+  form.cloud115_service_token = ''
   form.download_dir = settings.download_dir
   form.media_library_dir = settings.media_library_dir
   form.matching_threshold = settings.matching_threshold
@@ -52,6 +61,9 @@ function buildPayload(): SettingsUpdateRequest {
     tmdb_region: form.tmdb_region,
     qbittorrent_url: form.qbittorrent_url,
     qbittorrent_username: form.qbittorrent_username,
+    download_provider: form.download_provider,
+    cloud115_enabled: form.cloud115_enabled,
+    cloud115_service_url: form.cloud115_service_url,
     download_dir: form.download_dir,
     media_library_dir: form.media_library_dir,
     matching_threshold: form.matching_threshold,
@@ -63,6 +75,9 @@ function buildPayload(): SettingsUpdateRequest {
   }
   if (form.qbittorrent_password !== '') {
     payload.qbittorrent_password = form.qbittorrent_password
+  }
+  if (form.cloud115_service_token !== '') {
+    payload.cloud115_service_token = form.cloud115_service_token
   }
 
   return payload
@@ -86,6 +101,14 @@ function showTestResult(result: ConnectionTestResponse): void {
   ElMessage.error(result.message)
 }
 
+function savedLabel(saved: boolean | undefined, savedText: string, emptyText: string): string {
+  return saved ? savedText : emptyText
+}
+
+function savedTagType(saved: boolean | undefined): 'success' | 'info' {
+  return saved ? 'success' : 'info'
+}
+
 async function testTmdb(): Promise<void> {
   testingTmdb.value = true
   try {
@@ -105,6 +128,17 @@ async function testQbittorrent(): Promise<void> {
     ElMessage.error(error instanceof Error ? error.message : 'qBittorrent 连接测试失败')
   } finally {
     testingQbittorrent.value = false
+  }
+}
+
+async function testNas115(): Promise<void> {
+  testingNas115.value = true
+  try {
+    showTestResult(await settingsStore.testNas115())
+  } catch (error) {
+    ElMessage.error(error instanceof Error ? error.message : 'NAS 115 连接测试失败')
+  } finally {
+    testingNas115.value = false
   }
 }
 
@@ -144,8 +178,8 @@ onMounted(() => {
         <template #header>
           <div class="section-header">
             <span>TMDB 设置</span>
-            <el-tag size="small" :type="settingsStore.settings?.has_tmdb_api_key ? 'success' : 'info'">
-              {{ settingsStore.settings?.has_tmdb_api_key ? '已保存密钥' : '未填写密钥' }}
+            <el-tag size="small" :type="savedTagType(settingsStore.settings?.has_tmdb_api_key)">
+              {{ savedLabel(settingsStore.settings?.has_tmdb_api_key, '已保存密钥', '未填写密钥') }}
             </el-tag>
           </div>
         </template>
@@ -187,9 +221,15 @@ onMounted(() => {
             <span>qBittorrent 设置</span>
             <el-tag
               size="small"
-              :type="settingsStore.settings?.has_qbittorrent_password ? 'success' : 'info'"
+              :type="savedTagType(settingsStore.settings?.has_qbittorrent_password)"
             >
-              {{ settingsStore.settings?.has_qbittorrent_password ? '已保存密码' : '未填写密码' }}
+              {{
+                savedLabel(
+                  settingsStore.settings?.has_qbittorrent_password,
+                  '已保存密码',
+                  '未填写密码'
+                )
+              }}
             </el-tag>
           </div>
         </template>
@@ -214,6 +254,65 @@ onMounted(() => {
         <el-button :loading="testingQbittorrent" @click="testQbittorrent">
           测试 qBittorrent
         </el-button>
+      </el-card>
+
+      <el-card class="settings-section">
+        <template #header>
+          <div class="section-header">
+            <span>下载器类型</span>
+            <el-tag size="small" :type="form.download_provider === 'nas115' ? 'success' : 'info'">
+              {{ form.download_provider === 'nas115' ? 'NAS 115' : 'qBittorrent' }}
+            </el-tag>
+          </div>
+        </template>
+
+        <el-form-item label="下载器类型">
+          <el-radio-group v-model="form.download_provider">
+            <el-radio-button label="qbittorrent">qBittorrent</el-radio-button>
+            <el-radio-button label="nas115">NAS 115</el-radio-button>
+          </el-radio-group>
+        </el-form-item>
+
+        <el-alert
+          class="settings-inline-alert"
+          type="info"
+          title="NAS 115 服务运行在你的 NAS Docker 中，当前项目只调用该服务提供的本地接口，授权信息会加密保存。"
+          show-icon
+          :closable="false"
+        />
+
+        <el-form-item label="启用 NAS 115 服务">
+          <el-switch v-model="form.cloud115_enabled" active-text="启用" inactive-text="关闭" />
+        </el-form-item>
+        <el-form-item label="NAS 115 服务地址">
+          <el-input v-model="form.cloud115_service_url" placeholder="http://192.168.1.19:9527" />
+        </el-form-item>
+        <el-form-item label="NAS 115 服务令牌">
+          <el-input
+            v-model="form.cloud115_service_token"
+            type="password"
+            show-password
+            autocomplete="new-password"
+            placeholder="可留空；已保存的令牌不会显示，输入新令牌后保存"
+          />
+        </el-form-item>
+        <div class="section-footer">
+          <el-tag
+            size="small"
+            :type="savedTagType(settingsStore.settings?.has_cloud115_service_token)"
+          >
+            {{
+              savedLabel(
+                settingsStore.settings?.has_cloud115_service_token,
+                '已保存令牌',
+                '未填写令牌'
+              )
+            }}
+          </el-tag>
+          <el-button :loading="testingNas115" @click="testNas115">
+            测试 NAS 115
+          </el-button>
+        </div>
       </el-card>
 
       <el-card class="settings-section">
@@ -293,6 +392,13 @@ onMounted(() => {
   gap: 12px;
 }
 
+.section-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
 .field-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -311,7 +417,8 @@ onMounted(() => {
 
 @media (max-width: 720px) {
   .page-heading,
-  .section-header {
+  .section-header,
+  .section-footer {
     align-items: flex-start;
     flex-direction: column;
   }
