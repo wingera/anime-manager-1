@@ -39,6 +39,11 @@ const activeCandidates = computed(() => {
   return matchingStore.candidatesByItemId[activeItem.value.id] ?? []
 })
 
+const activeSearchQueries = computed(() => {
+  if (!activeItem.value) return []
+  return matchingStore.searchQueriesByItemId[activeItem.value.id] ?? []
+})
+
 function getErrorMessage(error: unknown, fallback: string): string {
   return error instanceof Error ? error.message : fallback
 }
@@ -282,6 +287,12 @@ onMounted(() => {
 
         <section>
           <h3>TMDB 候选</h3>
+          <div v-if="activeSearchQueries.length > 0" class="search-query-list">
+            <span>搜索词</span>
+            <el-tag v-for="query in activeSearchQueries" :key="query" size="small">
+              {{ query }}
+            </el-tag>
+          </div>
           <el-empty v-if="activeCandidates.length === 0" description="暂无候选，可手动填写匹配信息" />
           <el-radio-group v-else v-model="selectedCandidateId" class="candidate-list">
             <label
@@ -296,6 +307,7 @@ onMounted(() => {
               <span class="candidate-meta">
                 {{ candidate.first_air_date || '首播日期未知' }} · 匹配分 {{ candidate.match_score }}
               </span>
+              <span class="candidate-meta">命中搜索词：{{ candidate.search_query }}</span>
               <span class="candidate-overview">{{ candidate.overview || '暂无简介' }}</span>
             </label>
           </el-radio-group>
@@ -486,6 +498,16 @@ onMounted(() => {
   display: grid;
   gap: 10px;
   width: 100%;
+}
+
+.search-query-list {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 12px;
+  color: #6b7280;
+  font-size: 13px;
 }
 
 .candidate-card {

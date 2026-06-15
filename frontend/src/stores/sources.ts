@@ -6,9 +6,11 @@ import {
   getSources,
   importSourceItems,
   testSource,
+  testSourceDetail,
   updateSource
 } from '../api/sources'
 import type {
+  SourceDetailScanResponse,
   SourceItemImportResponse,
   SourceFormPayload,
   SourceItem,
@@ -32,6 +34,7 @@ interface SourcesState {
   loading: boolean
   saving: boolean
   testing: boolean
+  rescanningDetailUrl: string | null
   errorMessage: string
 }
 
@@ -52,6 +55,7 @@ export const useSourcesStore = defineStore('sources', {
     loading: false,
     saving: false,
     testing: false,
+    rescanningDetailUrl: null,
     errorMessage: ''
   }),
   actions: {
@@ -139,6 +143,40 @@ export const useSourcesStore = defineStore('sources', {
         throw error
       } finally {
         this.testing = false
+      }
+    },
+    async testFailedDetailPage(
+      sourceId: number,
+      page: SourceScanFailure,
+      pageNumber = 1
+    ): Promise<SourceDetailScanResponse> {
+      this.rescanningDetailUrl = page.url
+      this.errorMessage = ''
+      try {
+        const response = await testSourceDetail(sourceId, {
+          url: page.url,
+          title: page.title,
+          page_number: pageNumber
+        })
+        const existingHashes = new Set(this.previewItems.map((item) => item.info_hash))
+        const newItems = response.items.filter((item) => !existingHashes.has(item.info_hash))
+        if (newItems.length > 0) {
+          this.previewItems = [...this.previewItems, ...newItems]
+          this.previewFoundCount += newItems.length
+        }
+        if (response.failed_page === null) {
+          this.previewFailedPages = this.previewFailedPages.filter((item) => item.url !== page.url)
+        } else {
+          this.previewFailedPages = this.previewFailedPages.map((item) =>
+            item.url === page.url ? response.failed_page as SourceScanFailure : item
+          )
+        }
+        return response
+      } catch (error) {
+        this.errorMessage = getErrorMessage(error)
+        throw error
+      } finally {
+        this.rescanningDetailUrl = null
       }
     },
     async fetchSourceItems(): Promise<SourceItem[]> {

@@ -6,10 +6,12 @@ export interface TmdbCandidate {
   overview: string
   poster_path: string | null
   match_score: number
+  search_query: string
 }
 
 export interface TmdbSearchResponse {
   message: string
+  search_queries: string[]
   candidates: TmdbCandidate[]
 }
 

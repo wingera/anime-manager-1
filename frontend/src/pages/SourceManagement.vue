@@ -2,7 +2,13 @@
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { computed, onMounted, reactive, ref } from 'vue'
 import { useSourcesStore } from '../stores/sources'
-import type { SourceFormPayload, SourcePreviewItem, SourceSite, SourceType } from '../types/sources'
+import type {
+  SourceFormPayload,
+  SourcePreviewItem,
+  SourceScanFailure,
+  SourceSite,
+  SourceType
+} from '../types/sources'
 
 const sourcesStore = useSourcesStore()
 const dialogVisible = ref(false)
@@ -139,6 +145,27 @@ async function scanSelectedPreviewPage(): Promise<void> {
     return
   }
   await testSource(source, selectedPageNumber.value)
+}
+
+async function rescanFailedPage(page: SourceScanFailure): Promise<void> {
+  if (sourcesStore.previewSourceId === null) {
+    ElMessage.warning('请先测试来源')
+    return
+  }
+  try {
+    const result = await sourcesStore.testFailedDetailPage(
+      sourcesStore.previewSourceId,
+      page,
+      sourcesStore.previewPagination?.current_page ?? 1
+    )
+    if (result.failed_page) {
+      ElMessage.error(result.failed_page.message)
+      return
+    }
+    ElMessage.success(`详情页扫描完成，新增 ${result.items.length} 个资源`)
+  } catch (error) {
+    ElMessage.error(getErrorMessage(error, '详情页扫描失败'))
+  }
 }
 
 function handlePreviewSelectionChange(items: SourcePreviewItem[]): void {
@@ -318,8 +345,17 @@ onMounted(() => {
       >
         <ul class="failed-page-list">
           <li v-for="page in sourcesStore.previewFailedPages" :key="page.url">
-            <span>{{ page.title || page.url }}</span>
-            <span>{{ page.message }}</span>
+            <div>
+              <span>{{ page.title || page.url }}</span>
+              <span>{{ page.message }}</span>
+            </div>
+            <el-button
+              size="small"
+              :loading="sourcesStore.rescanningDetailUrl === page.url"
+              @click="rescanFailedPage(page)"
+            >
+              重新扫描
+            </el-button>
           </li>
         </ul>
       </el-alert>
@@ -595,6 +631,10 @@ onMounted(() => {
 }
 
 .failed-page-list li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
   overflow-wrap: anywhere;
 }
 

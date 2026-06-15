@@ -10,6 +10,7 @@ import type {
 interface MatchingState {
   matches: MediaMatch[]
   candidatesByItemId: Record<number, TmdbCandidate[]>
+  searchQueriesByItemId: Record<number, string[]>
   loading: boolean
   searchingItemId: number | null
   saving: boolean
@@ -24,6 +25,7 @@ export const useMatchingStore = defineStore('matching', {
   state: (): MatchingState => ({
     matches: [],
     candidatesByItemId: {},
+    searchQueriesByItemId: {},
     loading: false,
     searchingItemId: null,
     saving: false,
@@ -50,6 +52,7 @@ export const useMatchingStore = defineStore('matching', {
       try {
         const response = await searchTmdb(itemId)
         this.candidatesByItemId[itemId] = response.candidates
+        this.searchQueriesByItemId[itemId] = response.search_queries
         return response
       } catch (error) {
         this.errorMessage = getErrorMessage(error)

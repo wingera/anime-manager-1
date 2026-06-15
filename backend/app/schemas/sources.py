@@ -136,6 +136,20 @@ class SourceTestRequest(BaseModel):
     page_number: int = Field(default=1, ge=1)
 
 
+class SourceDetailScanRequest(BaseModel):
+    url: str = Field(min_length=1)
+    title: str | None = None
+    page_number: int = Field(default=1, ge=1)
+
+
+class SourceDetailScanResponse(BaseModel):
+    message: str
+    source_id: int
+    found_count: int
+    items: list[SourcePreviewItem]
+    failed_page: SourceScanFailure | None = None
+
+
 class SourceTestResponse(BaseModel):
     message: str
     source_id: int

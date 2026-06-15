@@ -1,3 +1,4 @@
+import re
 from difflib import SequenceMatcher
 
 from sqlalchemy import select
@@ -11,6 +12,14 @@ from app.utils.secrets import decrypt_secret
 from app.utils.title_parser import clean_search_title, guess_season_episode, guess_year
 
 TMDB_API_KEY_REQUIRED_ERROR = "请先填写 TMDB API 密钥"
+TMDB_QUERY_LIMIT = 5
+LEADING_BRACKET_GROUP_RE = re.compile(r"^\s*[\[【(（][^\]】)）]{1,40}[\]】)）]\s*")
+RESOURCE_HINT_RE = re.compile(r"(资源指纹|磁力入口|磁力|magnet|btih)", re.IGNORECASE)
+EPISODE_SUFFIX_RE = re.compile(
+    r"\s*(第\s*\d+\s*[巻卷话話集]|[＃#]\s*\d+|vol\.?\s*\d+).*$",
+    re.IGNORECASE,
+)
+ANIMATION_SUFFIX_RE = re.compile(r"\s+the\s+animation$", re.IGNORECASE)
 
 
 def get_source_item(db: Session, item_id: int) -> SourceItem | None:
@@ -54,43 +63,88 @@ def _score_candidate(
     return round(min(score, 100), 2)
 
 
-def search_tmdb_candidates(db: Session, item: SourceItem) -> list[TmdbCandidate]:
+def _normalize_query_text(value: str) -> str:
+    cleaned = RESOURCE_HINT_RE.sub(" ", value)
+    cleaned = re.sub(r"\s+", " ", cleaned)
+    return cleaned.strip(" /-_:：，,|")
+
+
+def _add_query(result: list[str], value: str) -> None:
+    query = _normalize_query_text(value)
+    if len(query) < 2:
+        return
+    normalized_existing = {item.casefold() for item in result}
+    if query.casefold() not in normalized_existing:
+        result.append(query)
+
+
+def build_tmdb_search_queries(title: str) -> list[str]:
+    without_group = LEADING_BRACKET_GROUP_RE.sub("", title)
+    cleaned_without_group = clean_search_title(without_group)
+    cleaned_full = clean_search_title(title)
+    queries: list[str] = []
+
+    base = EPISODE_SUFFIX_RE.sub("", cleaned_without_group).strip()
+    short_base = ANIMATION_SUFFIX_RE.sub("", base).strip()
+    _add_query(queries, short_base)
+    _add_query(queries, base)
+    _add_query(queries, EPISODE_SUFFIX_RE.sub("", cleaned_full))
+    _add_query(queries, cleaned_without_group)
+    _add_query(queries, cleaned_full)
+
+    return queries[:TMDB_QUERY_LIMIT]
+
+
+def search_tmdb_candidates(db: Session, item: SourceItem) -> tuple[list[str], list[TmdbCandidate]]:
     settings = get_or_create_settings(db)
     api_key = decrypt_secret(settings.tmdb_api_key)
     if not api_key:
         raise ValueError(TMDB_API_KEY_REQUIRED_ERROR)
 
-    search_title = clean_search_title(item.title) or item.title
+    search_queries = build_tmdb_search_queries(item.title)
+    if not search_queries:
+        search_queries = [item.title.strip()]
     source_year = guess_year(item.title)
     season_number, episode_number = guess_season_episode(item.title)
+    candidates_by_id: dict[int, TmdbCandidate] = {}
 
-    results = search_tv(
-        api_key=api_key,
-        language=settings.tmdb_language,
-        region=settings.tmdb_region,
-        query=search_title,
-        include_adult=settings.tmdb_include_adult,
-    )
-    return [
-        TmdbCandidate(
-            tmdb_id=result.tmdb_id,
-            title=result.title,
-            original_title=result.original_title,
-            first_air_date=result.first_air_date,
-            overview=result.overview,
-            poster_path=result.poster_path,
-            match_score=_score_candidate(
-                source_title=search_title,
-                source_year=source_year,
-                season_number=season_number,
-                episode_number=episode_number,
-                candidate_title=result.title,
+    for search_query in search_queries:
+        results = search_tv(
+            api_key=api_key,
+            language=settings.tmdb_language,
+            region=settings.tmdb_region,
+            query=search_query,
+            include_adult=settings.tmdb_include_adult,
+        )
+        for result in results[:10]:
+            candidate = TmdbCandidate(
+                tmdb_id=result.tmdb_id,
+                title=result.title,
                 original_title=result.original_title,
                 first_air_date=result.first_air_date,
-            ),
-        )
-        for result in results[:10]
-    ]
+                overview=result.overview,
+                poster_path=result.poster_path,
+                match_score=_score_candidate(
+                    source_title=search_query,
+                    source_year=source_year,
+                    season_number=season_number,
+                    episode_number=episode_number,
+                    candidate_title=result.title,
+                    original_title=result.original_title,
+                    first_air_date=result.first_air_date,
+                ),
+                search_query=search_query,
+            )
+            existing = candidates_by_id.get(candidate.tmdb_id)
+            if existing is None or candidate.match_score > existing.match_score:
+                candidates_by_id[candidate.tmdb_id] = candidate
+
+    candidates = sorted(
+        candidates_by_id.values(),
+        key=lambda candidate: candidate.match_score,
+        reverse=True,
+    )
+    return search_queries, candidates[:10]
 
 
 def save_media_match(

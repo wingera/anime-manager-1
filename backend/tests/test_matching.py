@@ -7,6 +7,7 @@ from sqlalchemy.orm import Session, sessionmaker
 from sqlalchemy.pool import StaticPool
 
 from app.db.database import Base, get_db
+from app.integrations.tmdb import TmdbTvResult
 from app.main import app
 
 
@@ -114,6 +115,91 @@ def test_tmdb_search_passes_include_adult_setting(
 
     assert response.status_code == 200
     assert captured_params["include_adult"] is True
+
+
+def test_tmdb_search_uses_short_backup_queries_and_deduplicates_results(
+    client: TestClient,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    source_response = client.post(
+        "/api/sources",
+        json={
+            "name": "用户授权来源",
+            "url": "https://example.test/list",
+            "source_type": "webpage",
+            "enabled": False,
+            "auth_note": "",
+        },
+    )
+    source_id = int(source_response.json()["source"]["id"])
+    item_response = client.post(
+        f"/api/sources/{source_id}/items",
+        json={
+            "permission_confirmed": True,
+            "items": [
+                {
+                    "title": (
+                        "[ピンクパイナップル] レイカは華麗な僕の女王 THE ANIMATION "
+                        "第4巻 2026 资源指纹 abcdef1234567890abcdef1234567890abcdef12"
+                    ),
+                    "url": "https://example.test/item",
+                    "info_hash": "abcdef1234567890abcdef1234567890abcdef12",
+                }
+            ],
+        },
+    )
+    item_id = int(item_response.json()["items"][0]["id"])
+    settings_response = client.put("/api/settings", json={"tmdb_api_key": "secret-tmdb-key"})
+    assert settings_response.status_code == 200
+    requested_queries: list[str] = []
+
+    def fake_search_tv(**kwargs: object) -> list[TmdbTvResult]:
+        query = str(kwargs["query"])
+        requested_queries.append(query)
+        if query == "レイカは華麗な僕の女王":
+            return [
+                TmdbTvResult(
+                    tmdb_id=100,
+                    title="レイカは華麗な僕の女王",
+                    original_title=None,
+                    first_air_date="2026-01-01",
+                    overview="",
+                    poster_path=None,
+                )
+            ]
+        if query == "レイカは華麗な僕の女王 THE ANIMATION":
+            return [
+                TmdbTvResult(
+                    tmdb_id=100,
+                    title="レイカは華麗な僕の女王",
+                    original_title=None,
+                    first_air_date="2026-01-01",
+                    overview="",
+                    poster_path=None,
+                ),
+                TmdbTvResult(
+                    tmdb_id=200,
+                    title="別候補",
+                    original_title=None,
+                    first_air_date=None,
+                    overview="",
+                    poster_path=None,
+                ),
+            ]
+        return []
+
+    monkeypatch.setattr("app.services.matching_service.search_tv", fake_search_tv)
+
+    response = client.post(f"/api/source-items/{item_id}/tmdb/search")
+
+    assert response.status_code == 200
+    data = response.json()
+    assert "レイカは華麗な僕の女王" in requested_queries
+    assert "レイカは華麗な僕の女王 THE ANIMATION" in requested_queries
+    assert all("资源指纹" not in query for query in requested_queries)
+    assert data["search_queries"] == requested_queries
+    assert [candidate["tmdb_id"] for candidate in data["candidates"]] == [100, 200]
+    assert data["candidates"][0]["search_query"] == "レイカは華麗な僕の女王"
 
 
 def test_save_match_for_source_item(client: TestClient) -> None:

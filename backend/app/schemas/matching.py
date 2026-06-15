@@ -11,10 +11,12 @@ class TmdbCandidate(BaseModel):
     overview: str
     poster_path: str | None
     match_score: float
+    search_query: str
 
 
 class TmdbSearchResponse(BaseModel):
     message: str
+    search_queries: list[str]
     candidates: list[TmdbCandidate]
 
 

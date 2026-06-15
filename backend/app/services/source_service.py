@@ -760,6 +760,13 @@ def _normalize_detail_url(base_url: str, href: str | None) -> str | None:
     return resolved
 
 
+def normalize_retry_detail_url(source: SourceSite, detail_url: str) -> str:
+    normalized_url = _normalize_detail_url(source.url, detail_url)
+    if normalized_url is None or _is_likely_listing_url(normalized_url):
+        raise ValueError("只能重试同站详情页")
+    return normalized_url
+
+
 def _is_likely_listing_url(detail_url: str) -> bool:
     parsed = urlparse(detail_url)
     path_segments = {
@@ -872,6 +879,36 @@ def _detail_candidates_from_context(
 
 def _detail_urls_from_context(source: SourceSite, context: HtmlPreviewContext) -> list[str]:
     return [candidate.url for candidate in _detail_candidates_from_context(source, context)]
+
+
+def preview_single_detail_page(
+    source: SourceSite,
+    *,
+    detail_url: str,
+    title: str | None = None,
+    page_number: int = 1,
+) -> tuple[int, list[SourcePreviewItem], SourceScanFailure | None]:
+    normalized_url = normalize_retry_detail_url(source, detail_url)
+    try:
+        response = _fetch_source_url(normalized_url)
+    except httpx.HTTPError:
+        return (
+            0,
+            [],
+            SourceScanFailure(
+                url=normalized_url,
+                title=title,
+                message=DETAIL_PAGE_FETCH_FAILED,
+            ),
+        )
+    found_hashes, previews, _context = _build_page_preview_items(
+        page_url=normalized_url,
+        page_number=page_number,
+        html=response.text,
+        existing_hashes=set(),
+        prefer_page_title=True,
+    )
+    return len(found_hashes), previews[:PREVIEW_ITEM_LIMIT], None
 
 
 def preview_source_items_with_detail_pages(

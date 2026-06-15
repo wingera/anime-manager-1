@@ -538,6 +538,100 @@ def test_detail_page_scan_reports_failures_and_uses_current_archive_category(
     ]
 
 
+def test_single_failed_detail_page_can_be_scanned_again(
+    client: TestClient,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    create_response = client.post(
+        "/api/sources",
+        json={
+            "name": "动画来源",
+            "url": "https://example.test/wp/anime.html",
+            "source_type": "webpage",
+            "enabled": False,
+            "scan_detail_pages": True,
+        },
+    )
+    source_id = create_response.json()["source"]["id"]
+    requested_urls: list[str] = []
+
+    class FakeResponse:
+        text = """
+        <html>
+          <head><title>重试成功的详情页</title></head>
+          <body>
+            <article>
+              <time datetime="2026-06-15T08:00:00Z">2026-06-15</time>
+              <p>资源指纹 abcdef1234567890abcdef1234567890abcdef12</p>
+            </article>
+          </body>
+        </html>
+        """
+
+        def raise_for_status(self) -> None:
+            return None
+
+    def fake_get(url: str, **_: object) -> FakeResponse:
+        requested_urls.append(url)
+        if url != "https://example.test/wp/anime-fail.html":
+            raise AssertionError(f"不应请求其他地址：{url}")
+        return FakeResponse()
+
+    monkeypatch.setattr("app.services.source_service.httpx.get", fake_get)
+
+    response = client.post(
+        f"/api/sources/{source_id}/details/test",
+        json={
+            "url": "https://example.test/wp/anime-fail.html",
+            "title": "失败条目",
+            "page_number": 1,
+        },
+    )
+
+    assert response.status_code == 200
+    data = response.json()
+    assert data["message"] == "详情页扫描完成"
+    assert data["failed_page"] is None
+    assert data["items"] == [
+        {
+            "title": "重试成功的详情页",
+            "url": "https://example.test/wp/anime-fail.html",
+            "info_hash": "abcdef1234567890abcdef1234567890abcdef12",
+            "magnet_uri": "magnet:?xt=urn:btih:abcdef1234567890abcdef1234567890abcdef12",
+            "published_at": "2026-06-15T08:00:00Z",
+            "resource_group": None,
+            "cover_image_url": None,
+            "page_number": 1,
+            "page_url": "https://example.test/wp/anime-fail.html",
+        }
+    ]
+    assert requested_urls == ["https://example.test/wp/anime-fail.html"]
+
+
+def test_single_detail_page_scan_rejects_external_url(client: TestClient) -> None:
+    create_response = client.post(
+        "/api/sources",
+        json={
+            "name": "动画来源",
+            "url": "https://example.test/wp/anime.html",
+            "source_type": "webpage",
+            "enabled": False,
+        },
+    )
+    source_id = create_response.json()["source"]["id"]
+
+    response = client.post(
+        f"/api/sources/{source_id}/details/test",
+        json={
+            "url": "https://other.example.test/wp/detail.html",
+            "title": "外站详情",
+        },
+    )
+
+    assert response.status_code == 400
+    assert response.json()["detail"] == "只能重试同站详情页"
+
+
 def test_source_test_discovers_pagination_without_scanning_other_pages(
     client: TestClient,
     monkeypatch: pytest.MonkeyPatch,

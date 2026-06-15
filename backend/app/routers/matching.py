@@ -30,12 +30,16 @@ def search_tmdb(item_id: int, db: DbSession) -> TmdbSearchResponse:
     if item is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="资源不存在")
     try:
-        candidates = search_tmdb_candidates(db, item)
+        search_queries, candidates = search_tmdb_candidates(db, item)
     except ValueError as exc:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
     except TmdbSearchError as exc:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
-    return TmdbSearchResponse(message="TMDB 搜索完成", candidates=candidates)
+    return TmdbSearchResponse(
+        message="TMDB 搜索完成",
+        search_queries=search_queries,
+        candidates=candidates,
+    )
 
 
 @router.put("/api/source-items/{item_id}/match", response_model=MediaMatchMessageResponse)

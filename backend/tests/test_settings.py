@@ -109,3 +109,32 @@ def test_unconfigured_qbittorrent_test_returns_chinese_message(client: TestClien
         "success": False,
         "message": "请先填写 qBittorrent 地址、用户名和密码",
     }
+
+
+def test_qbittorrent_test_accepts_204_login_success(
+    client: TestClient,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    client.put(
+        "/api/settings",
+        json={
+            "qbittorrent_url": "http://127.0.0.1:8080",
+            "qbittorrent_username": "admin",
+            "qbittorrent_password": "secret-password",
+        },
+    )
+
+    class FakeResponse:
+        status_code = 204
+        text = ""
+        cookies = {"QBT_SID_8080": "session-id"}
+
+    def fake_post(*args: object, **kwargs: object) -> FakeResponse:
+        return FakeResponse()
+
+    monkeypatch.setattr("app.integrations.qbittorrent.httpx.post", fake_post)
+
+    response = client.post("/api/settings/test-qbittorrent")
+
+    assert response.status_code == 200
+    assert response.json() == {"success": True, "message": "qBittorrent 连接成功"}

@@ -1,5 +1,7 @@
 import type {
   DeleteSourceResponse,
+  SourceDetailScanRequest,
+  SourceDetailScanResponse,
   SourceFormPayload,
   SourceItemImportRequest,
   SourceItemImportResponse,
@@ -68,6 +70,16 @@ export function testSource(
   payload: SourceTestRequest = { page_number: 1 }
 ): Promise<SourceTestResponse> {
   return request<SourceTestResponse>(`/sources/${sourceId}/test`, {
+    method: 'POST',
+    body: JSON.stringify(payload)
+  })
+}
+
+export function testSourceDetail(
+  sourceId: number,
+  payload: SourceDetailScanRequest
+): Promise<SourceDetailScanResponse> {
+  return request<SourceDetailScanResponse>(`/sources/${sourceId}/details/test`, {
     method: 'POST',
     body: JSON.stringify(payload)
   })

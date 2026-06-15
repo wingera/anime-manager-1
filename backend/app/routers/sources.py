@@ -7,6 +7,8 @@ from app.db.database import get_db
 from app.db.models import SourceSite
 from app.schemas.sources import (
     DeleteSourceResponse,
+    SourceDetailScanRequest,
+    SourceDetailScanResponse,
     SourceItemImportRequest,
     SourceItemImportResponse,
     SourceItemListResponse,
@@ -28,6 +30,7 @@ from app.services.source_service import (
     import_source_items,
     list_source_items,
     list_sources,
+    preview_single_detail_page,
     test_source,
     update_source,
 )
@@ -140,6 +143,37 @@ def preview_source(
         warning_message=warning_message,
         pagination=pagination,
         failed_pages=failed_pages,
+    )
+
+
+@router.post("/api/sources/{source_id}/details/test", response_model=SourceDetailScanResponse)
+def preview_source_detail(
+    source_id: int,
+    payload: SourceDetailScanRequest,
+    db: DbSession,
+) -> SourceDetailScanResponse:
+    source = _get_source_or_404(db, source_id)
+    try:
+        found_count, items, failed_page = preview_single_detail_page(
+            source,
+            detail_url=payload.url,
+            title=payload.title,
+            page_number=payload.page_number,
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
+    write_operation_log(
+        db,
+        module="sources",
+        message="详情页扫描完成" if failed_page is None else "详情页扫描失败",
+        detail=f"来源名称：{source.name}，详情页：{payload.url}，发现资源数量：{found_count}",
+    )
+    return SourceDetailScanResponse(
+        message="详情页扫描完成" if failed_page is None else "详情页扫描失败",
+        source_id=source_id,
+        found_count=found_count,
+        items=items,
+        failed_page=failed_page,
     )
 
 

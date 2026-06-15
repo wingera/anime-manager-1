@@ -33,12 +33,22 @@ def _extract_hash_from_magnet(magnet_uri: str) -> str:
     return ""
 
 
+def _is_login_success(response: httpx.Response) -> bool:
+    if response.status_code == 200 and response.text.strip().lower() == "ok.":
+        return True
+    if response.status_code == 204 and any(
+        key.upper().startswith("QBT_SID") for key in response.cookies.keys()
+    ):
+        return True
+    return False
+
+
 def _login(client: httpx.Client, url: str, username: str, password: str) -> None:
     response = client.post(
         _api_url(url, "api/v2/auth/login"),
         data={"username": username, "password": password},
     )
-    if response.status_code != 200 or response.text.strip().lower() != "ok.":
+    if not _is_login_success(response):
         raise ValueError("qBittorrent 认证失败，请检查地址、用户名和密码")
 
 
@@ -63,7 +73,7 @@ def test_qbittorrent_connection(
     except httpx.RequestError:
         return ConnectionTestResponse(success=False, message="qBittorrent 连接失败：网络异常")
 
-    if response.status_code == 200 and response.text.strip().lower() == "ok.":
+    if _is_login_success(response):
         return ConnectionTestResponse(success=True, message="qBittorrent 连接成功")
 
     return ConnectionTestResponse(

@@ -71,6 +71,12 @@ export interface SourceTestRequest {
   page_number: number
 }
 
+export interface SourceDetailScanRequest {
+  url: string
+  title: string | null
+  page_number: number
+}
+
 export interface SourceScanFailure {
   url: string
   title: string | null
@@ -85,6 +91,14 @@ export interface SourceTestResponse {
   warning_message: string | null
   pagination: SourcePagination
   failed_pages: SourceScanFailure[]
+}
+
+export interface SourceDetailScanResponse {
+  message: string
+  source_id: number
+  found_count: number
+  items: SourcePreviewItem[]
+  failed_page: SourceScanFailure | null
 }
 
 export interface SourceItem {
