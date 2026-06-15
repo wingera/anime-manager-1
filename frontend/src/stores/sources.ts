@@ -24,6 +24,7 @@ interface SourcesState {
   previewItems: SourcePreviewItem[]
   previewSourceId: number | null
   previewFoundCount: number
+  previewWarningMessage: string | null
   loading: boolean
   saving: boolean
   testing: boolean
@@ -41,6 +42,7 @@ export const useSourcesStore = defineStore('sources', {
     previewItems: [],
     previewSourceId: null,
     previewFoundCount: 0,
+    previewWarningMessage: null,
     loading: false,
     saving: false,
     testing: false,
@@ -102,6 +104,7 @@ export const useSourcesStore = defineStore('sources', {
         if (this.previewSourceId === sourceId) {
           this.previewSourceId = null
           this.previewFoundCount = 0
+          this.previewWarningMessage = null
           this.previewItems = []
         }
       } catch (error) {
@@ -118,6 +121,7 @@ export const useSourcesStore = defineStore('sources', {
         const response = await testSource(sourceId)
         this.previewSourceId = response.source_id
         this.previewFoundCount = response.found_count
+        this.previewWarningMessage = response.warning_message
         this.previewItems = response.items
         return response
       } catch (error) {
@@ -134,12 +138,16 @@ export const useSourcesStore = defineStore('sources', {
     },
     async addPreviewItems(
       sourceId: number,
-      items: SourcePreviewItem[]
+      items: SourcePreviewItem[],
+      permissionConfirmed: boolean
     ): Promise<SourceItemImportResponse> {
       this.saving = true
       this.errorMessage = ''
       try {
-        const response = await importSourceItems(sourceId, { items })
+        const response = await importSourceItems(sourceId, {
+          items,
+          permission_confirmed: permissionConfirmed
+        })
         await this.fetchSourceItems()
         return response
       } catch (error) {

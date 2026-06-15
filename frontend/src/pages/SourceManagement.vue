@@ -8,6 +8,7 @@ const sourcesStore = useSourcesStore()
 const dialogVisible = ref(false)
 const editingSourceId = ref<number | null>(null)
 const selectedPreviewItems = ref<SourcePreviewItem[]>([])
+const legalPermissionConfirmed = ref(false)
 
 const emptyForm = (): SourceFormPayload => ({
   name: '',
@@ -113,6 +114,7 @@ async function testSource(source: SourceSite): Promise<void> {
   try {
     const result = await sourcesStore.testSource(source.id)
     selectedPreviewItems.value = []
+    legalPermissionConfirmed.value = false
     ElMessage.success(result.message)
   } catch (error) {
     ElMessage.error(getErrorMessage(error, '来源测试失败'))
@@ -128,13 +130,19 @@ async function addSelectedPreviewItems(): Promise<void> {
     ElMessage.warning('请先选择要加入资源库的资源')
     return
   }
+  if (!legalPermissionConfirmed.value) {
+    ElMessage.warning('请先确认该来源和资源具有合法访问、下载和整理权限')
+    return
+  }
   try {
     const result = await sourcesStore.addPreviewItems(
       sourcesStore.previewSourceId,
-      selectedPreviewItems.value
+      selectedPreviewItems.value,
+      legalPermissionConfirmed.value
     )
     ElMessage.success(`资源已加入资源库，新增 ${result.created_count} 个，跳过 ${result.skipped_count} 个`)
     selectedPreviewItems.value = []
+    legalPermissionConfirmed.value = false
   } catch (error) {
     ElMessage.error(getErrorMessage(error, '加入资源库失败'))
   }
@@ -223,15 +231,28 @@ onMounted(() => {
             {{ sourcesStore.previewItems.length }} 个。
           </p>
         </div>
-        <el-button
-          type="primary"
-          :disabled="selectedPreviewItems.length === 0"
-          :loading="sourcesStore.saving"
-          @click="addSelectedPreviewItems"
-        >
-          加入资源库
-        </el-button>
+        <div class="preview-actions">
+          <el-checkbox v-model="legalPermissionConfirmed" class="permission-confirm">
+            我确认该来源和资源具有合法访问、下载和整理权限。
+          </el-checkbox>
+          <el-button
+            type="primary"
+            :disabled="selectedPreviewItems.length === 0 || !legalPermissionConfirmed"
+            :loading="sourcesStore.saving"
+            @click="addSelectedPreviewItems"
+          >
+            加入资源库
+          </el-button>
+        </div>
       </div>
+      <el-alert
+        v-if="sourcesStore.previewWarningMessage"
+        class="preview-warning"
+        type="warning"
+        :title="sourcesStore.previewWarningMessage"
+        show-icon
+        :closable="false"
+      />
       <div class="table-wrap">
         <el-table
           :data="sourcesStore.previewItems"
@@ -240,6 +261,8 @@ onMounted(() => {
         >
           <el-table-column type="selection" width="48" />
           <el-table-column prop="title" label="标题" min-width="220" />
+          <el-table-column prop="url" label="文章链接" min-width="240" />
+          <el-table-column prop="published_at" label="发布时间" min-width="180" />
           <el-table-column prop="info_hash" label="资源指纹" min-width="300" />
           <el-table-column prop="magnet_uri" label="磁力入口" min-width="360" />
         </el-table>
@@ -427,6 +450,22 @@ onMounted(() => {
 
 .preview-section {
   margin-top: 24px;
+}
+
+.preview-actions {
+  display: flex;
+  align-items: flex-end;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.permission-confirm {
+  max-width: 360px;
+  white-space: normal;
+}
+
+.preview-warning {
+  margin-bottom: 12px;
 }
 
 .table-wrap {

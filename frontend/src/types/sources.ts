@@ -47,6 +47,7 @@ export interface SourcePreviewItem {
   url: string | null
   info_hash: string
   magnet_uri: string
+  published_at: string | null
 }
 
 export interface SourceTestResponse {
@@ -54,6 +55,7 @@ export interface SourceTestResponse {
   source_id: number
   found_count: number
   items: SourcePreviewItem[]
+  warning_message: string | null
 }
 
 export interface SourceItem {
@@ -76,6 +78,7 @@ export interface SourceItemListResponse {
 
 export interface SourceItemImportRequest {
   items: SourcePreviewItem[]
+  permission_confirmed: boolean
 }
 
 export interface SourceItemImportResponse {

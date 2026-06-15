@@ -106,7 +106,7 @@ def remove_source(source_id: int, db: DbSession) -> DeleteSourceResponse:
 def preview_source(source_id: int, db: DbSession) -> SourceTestResponse:
     source = _get_source_or_404(db, source_id)
     try:
-        found_count, items = test_source(db, source)
+        found_count, items, warning_message = test_source(db, source)
     except SourceTestError as exc:
         write_operation_log(
             db,
@@ -127,6 +127,7 @@ def preview_source(source_id: int, db: DbSession) -> SourceTestResponse:
         source_id=source_id,
         found_count=found_count,
         items=items,
+        warning_message=warning_message,
     )
 
 
@@ -141,11 +142,19 @@ def add_source_items(
     db: DbSession,
 ) -> SourceItemImportResponse:
     _get_source_or_404(db, source_id)
+    if not payload.permission_confirmed:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="加入资源库前必须确认合法访问、下载和整理权限",
+        )
     try:
         created_count, skipped_count, items = import_source_items(
             db,
             source_id=source_id,
-            items=[(item.title, item.url, item.info_hash) for item in payload.items],
+            items=[
+                (item.title, item.url, item.info_hash, item.published_at)
+                for item in payload.items
+            ],
         )
     except ValueError as exc:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc

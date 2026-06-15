@@ -7,9 +7,9 @@ from sqlalchemy.orm import Session, sessionmaker
 from sqlalchemy.pool import StaticPool
 
 from app.db.database import Base, get_db
-from app.db.models import SourceItem
+from app.db.models import SourceItem, SourceSite
 from app.main import app
-from app.services.source_service import create_source_item
+from app.services.source_service import create_source_item, preview_source_items
 from app.utils.info_hash import find_info_hashes, normalize_info_hash
 
 
@@ -153,6 +153,113 @@ def test_source_test_returns_preview_without_creating_items(
             "url": "https://example.test/item",
             "info_hash": "abcdef1234567890abcdef1234567890abcdef12",
             "magnet_uri": "magnet:?xt=urn:btih:abcdef1234567890abcdef1234567890abcdef12",
+            "published_at": None,
         }
     ]
+    assert data["warning_message"] is None
     assert db_session.scalars(select(SourceItem)).all() == []
+
+
+def test_generic_html_preview_extracts_article_title_link_time_and_info_hash() -> None:
+    source = SourceSite(id=1, name="授权网页", url="https://example.test/list")
+    html = """
+    <html>
+      <head><title>授权来源列表</title></head>
+      <body>
+        <article>
+          <h2><a href="/posts/one">第一集更新</a></h2>
+          <time datetime="2026-06-01T12:30:00Z">2026-06-01</time>
+          <p>资源指纹 abcdef1234567890abcdef1234567890abcdef12</p>
+        </article>
+      </body>
+    </html>
+    """
+
+    found_count, items, warning_message = preview_source_items(source, html)
+
+    assert found_count == 1
+    assert warning_message is None
+    assert len(items) == 1
+    assert items[0].title == "第一集更新"
+    assert items[0].url == "https://example.test/posts/one"
+    assert items[0].info_hash == "abcdef1234567890abcdef1234567890abcdef12"
+    assert items[0].published_at is not None
+    assert items[0].published_at.isoformat() == "2026-06-01T12:30:00+00:00"
+
+
+def test_generic_html_preview_deduplicates_repeated_info_hash() -> None:
+    source = SourceSite(id=1, name="授权网页", url="https://example.test/list")
+    html = """
+    <article>
+      <a href="/one">第一条 abcdef1234567890abcdef1234567890abcdef12</a>
+      <p>重复 ABCDEF1234567890ABCDEF1234567890ABCDEF12</p>
+    </article>
+    """
+
+    found_count, items, warning_message = preview_source_items(source, html)
+
+    assert found_count == 1
+    assert warning_message is None
+    assert [item.info_hash for item in items] == [
+        "abcdef1234567890abcdef1234567890abcdef12"
+    ]
+
+
+def test_generic_html_preview_returns_warning_for_configured_high_risk_keyword() -> None:
+    source = SourceSite(id=1, name="授权网页", url="https://example.test/list?tag=adult")
+    html = """
+    <html>
+      <head><title>用户授权 adult 列表</title></head>
+      <body>
+        <article><a href="/one">测试 abcdef1234567890abcdef1234567890abcdef12</a></article>
+      </body>
+    </html>
+    """
+
+    found_count, items, warning_message = preview_source_items(source, html)
+
+    assert found_count == 1
+    assert len(items) == 1
+    assert warning_message == "该来源可能包含高风险内容，请确认你拥有合法访问和整理权限。"
+
+
+def test_generic_html_preview_ignores_non_40_character_info_hash() -> None:
+    source = SourceSite(id=1, name="授权网页", url="https://example.test/list")
+    html = '<a href="/bad">错误资源 abcdef1234567890abcdef1234567890abcdef1</a>'
+
+    found_count, items, warning_message = preview_source_items(source, html)
+
+    assert found_count == 0
+    assert items == []
+    assert warning_message is None
+
+
+def test_import_source_items_requires_permission_confirmation(client: TestClient) -> None:
+    create_response = client.post(
+        "/api/sources",
+        json={
+            "name": "测试来源",
+            "url": "https://example.test/list",
+            "source_type": "webpage",
+            "enabled": False,
+        },
+    )
+    source_id = create_response.json()["source"]["id"]
+
+    response = client.post(
+        f"/api/sources/{source_id}/items",
+        json={
+            "permission_confirmed": False,
+            "items": [
+                {
+                    "title": "测试标题",
+                    "url": "https://example.test/item",
+                    "info_hash": "abcdef1234567890abcdef1234567890abcdef12",
+                    "published_at": "2026-06-01T12:30:00Z",
+                }
+            ],
+        },
+    )
+
+    assert response.status_code == 400
+    assert response.json()["detail"] == "加入资源库前必须确认合法访问、下载和整理权限"

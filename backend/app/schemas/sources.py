@@ -86,10 +86,12 @@ class SourceItemImportItem(BaseModel):
     title: str = Field(min_length=1)
     url: str | None = None
     info_hash: str = Field(min_length=1)
+    published_at: datetime | None = None
 
 
 class SourceItemImportRequest(BaseModel):
     items: list[SourceItemImportItem] = Field(min_length=1)
+    permission_confirmed: bool = False
 
 
 class SourceItemImportResponse(BaseModel):
@@ -104,6 +106,7 @@ class SourcePreviewItem(BaseModel):
     url: str | None
     info_hash: str
     magnet_uri: str
+    published_at: datetime | None
 
 
 class SourceTestResponse(BaseModel):
@@ -111,3 +114,4 @@ class SourceTestResponse(BaseModel):
     source_id: int
     found_count: int
     items: list[SourcePreviewItem]
+    warning_message: str | None

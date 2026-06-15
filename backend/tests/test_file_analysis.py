@@ -76,6 +76,7 @@ def _create_source_item(client: TestClient) -> int:
     item_response = client.post(
         f"/api/sources/{source_id}/items",
         json={
+            "permission_confirmed": True,
             "items": [
                 {
                     "title": "测试番剧 S01E01 2026",

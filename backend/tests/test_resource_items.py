@@ -58,11 +58,13 @@ def test_add_preview_items_to_resource_library(client: TestClient) -> None:
     response = client.post(
         f"/api/sources/{source_id}/items",
         json={
+            "permission_confirmed": True,
             "items": [
                 {
                     "title": "测试标题 S01E02 2026",
                     "url": "https://example.test/item",
                     "info_hash": "ABCDEF1234567890ABCDEF1234567890ABCDEF12",
+                    "published_at": "2026-06-01T12:30:00Z",
                 }
             ]
         },
@@ -77,11 +79,13 @@ def test_add_preview_items_to_resource_library(client: TestClient) -> None:
     assert data["items"][0]["magnet_uri"] == (
         "magnet:?xt=urn:btih:abcdef1234567890abcdef1234567890abcdef12"
     )
+    assert data["items"][0]["published_at"] == "2026-06-01T12:30:00"
 
 
 def test_duplicate_info_hash_is_skipped_when_adding_items(client: TestClient) -> None:
     source_id = _create_source(client)
     payload = {
+        "permission_confirmed": True,
         "items": [
             {
                 "title": "第一条",
@@ -114,7 +118,10 @@ def test_invalid_info_hash_is_rejected_when_adding_items(client: TestClient) -> 
 
     response = client.post(
         f"/api/sources/{source_id}/items",
-        json={"items": [{"title": "错误资源", "url": None, "info_hash": "abc123"}]},
+        json={
+            "permission_confirmed": True,
+            "items": [{"title": "错误资源", "url": None, "info_hash": "abc123"}],
+        },
     )
 
     assert response.status_code == 400

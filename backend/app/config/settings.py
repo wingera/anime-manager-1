@@ -21,6 +21,19 @@ class Settings(BaseSettings):
     log_dir: Path = Path("/app/data/logs")
     download_dir: Path = Path("/downloads")
     media_library_dir: Path = Path("/media")
+    high_risk_source_keywords: list[str] = Field(
+        default_factory=lambda: [
+            "18+",
+            "adult",
+            "r18",
+            "nsfw",
+            "成人",
+            "色情",
+            "盗版",
+            "破解",
+            "未授权",
+        ]
+    )
 
 
 @lru_cache
