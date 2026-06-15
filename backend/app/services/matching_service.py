@@ -20,6 +20,7 @@ EPISODE_SUFFIX_RE = re.compile(
     re.IGNORECASE,
 )
 ANIMATION_SUFFIX_RE = re.compile(r"\s+the\s+animation$", re.IGNORECASE)
+OVA_MARKER_RE = re.compile(r"(?<![a-z0-9])ova(?![a-z0-9])", re.IGNORECASE)
 
 
 def get_source_item(db: Session, item_id: int) -> SourceItem | None:
@@ -78,6 +79,10 @@ def _add_query(result: list[str], value: str) -> None:
         result.append(query)
 
 
+def _without_ova_marker(value: str) -> str:
+    return _normalize_query_text(OVA_MARKER_RE.sub(" ", value))
+
+
 def build_tmdb_search_queries(title: str) -> list[str]:
     without_group = LEADING_BRACKET_GROUP_RE.sub("", title)
     cleaned_without_group = clean_search_title(without_group)
@@ -87,7 +92,9 @@ def build_tmdb_search_queries(title: str) -> list[str]:
     base = EPISODE_SUFFIX_RE.sub("", cleaned_without_group).strip()
     short_base = ANIMATION_SUFFIX_RE.sub("", base).strip()
     _add_query(queries, short_base)
+    _add_query(queries, _without_ova_marker(short_base))
     _add_query(queries, base)
+    _add_query(queries, _without_ova_marker(base))
     _add_query(queries, EPISODE_SUFFIX_RE.sub("", cleaned_full))
     _add_query(queries, cleaned_without_group)
     _add_query(queries, cleaned_full)

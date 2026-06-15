@@ -9,6 +9,7 @@ from sqlalchemy.pool import StaticPool
 from app.db.database import Base, get_db
 from app.integrations.tmdb import TmdbTvResult
 from app.main import app
+from app.services.matching_service import build_tmdb_search_queries
 
 
 @pytest.fixture()
@@ -200,6 +201,17 @@ def test_tmdb_search_uses_short_backup_queries_and_deduplicates_results(
     assert data["search_queries"] == requested_queries
     assert [candidate["tmdb_id"] for candidate in data["candidates"]] == [100, 200]
     assert data["candidates"][0]["search_query"] == "レイカは華麗な僕の女王"
+
+
+def test_tmdb_search_queries_include_variant_without_standalone_ova() -> None:
+    queries = build_tmdb_search_queries("テスト OVA THE ANIMATION 第1巻 2026")
+
+    assert "テスト THE ANIMATION" in queries
+    assert "テスト OVA THE ANIMATION" in queries
+    assert build_tmdb_search_queries("Renovation THE ANIMATION") == [
+        "Renovation",
+        "Renovation THE ANIMATION",
+    ]
 
 
 def test_save_match_for_source_item(client: TestClient) -> None:

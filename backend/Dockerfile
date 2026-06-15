@@ -1,5 +1,7 @@
 FROM python:3.13-slim-bookworm
 
+ARG PIP_INDEX_URL=https://pypi.tuna.tsinghua.edu.cn/simple
+
 WORKDIR /app
 
 RUN set -eux; \
@@ -11,9 +13,9 @@ RUN set -eux; \
     apt-get install -y --no-install-recommends ffmpeg; \
     rm -rf /var/lib/apt/lists/*
 
-COPY pyproject.toml ./
-RUN pip install --no-cache-dir -e ".[dev]"
-
 COPY . .
+RUN pip install --no-cache-dir --index-url "${PIP_INDEX_URL}" "."
 
 EXPOSE 8031
+
+CMD ["python", "-m", "uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8031"]
