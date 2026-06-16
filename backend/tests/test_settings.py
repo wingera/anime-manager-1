@@ -46,8 +46,14 @@ def test_get_settings_returns_default_config(client: TestClient) -> None:
     assert data["tmdb_include_adult"] is False
     assert data["has_tmdb_api_key"] is False
     assert data["has_qbittorrent_password"] is False
+    assert data["metadata_proxy_type"] == "none"
+    assert data["metadata_proxy_host"] is None
+    assert data["metadata_proxy_port"] is None
+    assert data["metadata_proxy_username"] is None
+    assert data["has_metadata_proxy_password"] is False
     assert "tmdb_api_key" not in data
     assert "qbittorrent_password" not in data
+    assert "metadata_proxy_password" not in data
 
 
 def test_put_settings_saves_normal_fields(client: TestClient) -> None:
@@ -71,6 +77,31 @@ def test_put_settings_saves_normal_fields(client: TestClient) -> None:
     assert data["media_library_dir"] == "/data/media"
     assert data["matching_threshold"] == 90
     assert data["tmdb_include_adult"] is True
+
+
+def test_put_settings_saves_metadata_proxy_without_plaintext_password(
+    client: TestClient,
+) -> None:
+    response = client.put(
+        "/api/settings",
+        json={
+            "metadata_proxy_type": "socks5",
+            "metadata_proxy_host": "127.0.0.1",
+            "metadata_proxy_port": 1080,
+            "metadata_proxy_username": "proxy-user",
+            "metadata_proxy_password": "proxy-secret",
+        },
+    )
+
+    assert response.status_code == 200
+    data = response.json()
+    assert data["metadata_proxy_type"] == "socks5"
+    assert data["metadata_proxy_host"] == "127.0.0.1"
+    assert data["metadata_proxy_port"] == 1080
+    assert data["metadata_proxy_username"] == "proxy-user"
+    assert data["has_metadata_proxy_password"] is True
+    assert "proxy-secret" not in response.text
+    assert "metadata_proxy_password" not in data
 
 
 def test_put_settings_does_not_return_sensitive_plaintext(client: TestClient) -> None:

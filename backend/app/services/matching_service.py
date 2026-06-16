@@ -8,6 +8,7 @@ from app.db.models import MediaMatch, SourceItem
 from app.integrations.tmdb import TmdbSearchError, search_tv
 from app.schemas.matching import MediaMatchSaveRequest, TmdbCandidate
 from app.services.settings_service import get_or_create_settings
+from app.utils.metadata_proxy import build_metadata_proxy_url
 from app.utils.secrets import decrypt_secret
 from app.utils.title_parser import clean_search_title, guess_season_episode, guess_year
 
@@ -114,6 +115,7 @@ def search_tmdb_candidates(db: Session, item: SourceItem) -> tuple[list[str], li
     source_year = guess_year(item.title)
     season_number, episode_number = guess_season_episode(item.title)
     candidates_by_id: dict[int, TmdbCandidate] = {}
+    proxy_url = build_metadata_proxy_url(settings)
 
     for search_query in search_queries:
         results = search_tv(
@@ -122,6 +124,7 @@ def search_tmdb_candidates(db: Session, item: SourceItem) -> tuple[list[str], li
             region=settings.tmdb_region,
             query=search_query,
             include_adult=settings.tmdb_include_adult,
+            proxy_url=proxy_url,
         )
         for result in results[:10]:
             candidate = TmdbCandidate(

@@ -14,6 +14,11 @@ export interface AppSettings {
   media_library_dir: string
   matching_threshold: number
   tmdb_include_adult: boolean
+  metadata_proxy_type: 'none' | 'http' | 'socks5'
+  metadata_proxy_host: string | null
+  metadata_proxy_port: number | null
+  metadata_proxy_username: string | null
+  has_metadata_proxy_password: boolean
   created_at: string
   updated_at: string
 }
@@ -33,6 +38,11 @@ export interface SettingsUpdateRequest {
   media_library_dir?: string | null
   matching_threshold?: number | null
   tmdb_include_adult?: boolean | null
+  metadata_proxy_type?: 'none' | 'http' | 'socks5' | null
+  metadata_proxy_host?: string | null
+  metadata_proxy_port?: number | null
+  metadata_proxy_username?: string | null
+  metadata_proxy_password?: string | null
 }
 
 export interface ConnectionTestResponse {

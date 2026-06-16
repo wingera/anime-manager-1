@@ -61,6 +61,11 @@ def prepare_app_settings_schema(engine: Engine) -> None:
             "cloud115_enabled": "BOOLEAN NOT NULL DEFAULT 0",
             "cloud115_service_url": "TEXT NOT NULL DEFAULT 'http://192.168.1.19:9527'",
             "cloud115_service_token": "TEXT",
+            "metadata_proxy_type": "VARCHAR(20) NOT NULL DEFAULT 'none'",
+            "metadata_proxy_host": "TEXT",
+            "metadata_proxy_port": "INTEGER",
+            "metadata_proxy_username": "VARCHAR(255)",
+            "metadata_proxy_password": "TEXT",
         }
         for column, definition in additions.items():
             if column not in columns:

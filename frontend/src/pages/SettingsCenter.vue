@@ -23,7 +23,12 @@ const form = reactive({
   download_dir: '/downloads',
   media_library_dir: '/media',
   matching_threshold: 85,
-  tmdb_include_adult: false
+  tmdb_include_adult: false,
+  metadata_proxy_type: 'none' as 'none' | 'http' | 'socks5',
+  metadata_proxy_host: '',
+  metadata_proxy_port: 1080,
+  metadata_proxy_username: '',
+  metadata_proxy_password: ''
 })
 
 function fillForm(): void {
@@ -44,6 +49,11 @@ function fillForm(): void {
   form.media_library_dir = settings.media_library_dir
   form.matching_threshold = settings.matching_threshold
   form.tmdb_include_adult = settings.tmdb_include_adult
+  form.metadata_proxy_type = settings.metadata_proxy_type
+  form.metadata_proxy_host = settings.metadata_proxy_host ?? ''
+  form.metadata_proxy_port = settings.metadata_proxy_port ?? 1080
+  form.metadata_proxy_username = settings.metadata_proxy_username ?? ''
+  form.metadata_proxy_password = ''
 }
 
 async function loadSettings(): Promise<void> {
@@ -67,7 +77,11 @@ function buildPayload(): SettingsUpdateRequest {
     download_dir: form.download_dir,
     media_library_dir: form.media_library_dir,
     matching_threshold: form.matching_threshold,
-    tmdb_include_adult: form.tmdb_include_adult
+    tmdb_include_adult: form.tmdb_include_adult,
+    metadata_proxy_type: form.metadata_proxy_type,
+    metadata_proxy_host: form.metadata_proxy_host,
+    metadata_proxy_port: form.metadata_proxy_port,
+    metadata_proxy_username: form.metadata_proxy_username
   }
 
   if (form.tmdb_api_key !== '') {
@@ -78,6 +92,9 @@ function buildPayload(): SettingsUpdateRequest {
   }
   if (form.cloud115_service_token !== '') {
     payload.cloud115_service_token = form.cloud115_service_token
+  }
+  if (form.metadata_proxy_password !== '') {
+    payload.metadata_proxy_password = form.metadata_proxy_password
   }
 
   return payload
@@ -213,6 +230,85 @@ onMounted(() => {
           :closable="false"
         />
         <el-button :loading="testingTmdb" @click="testTmdb">测试 TMDB</el-button>
+      </el-card>
+
+      <el-card class="settings-section">
+        <template #header>
+          <div class="section-header">
+            <span>资料与来源代理</span>
+            <el-tag
+              size="small"
+              :type="form.metadata_proxy_type === 'none' ? 'info' : 'success'"
+            >
+              {{ form.metadata_proxy_type === 'none' ? '未启用' : '已启用' }}
+            </el-tag>
+          </div>
+        </template>
+
+        <el-alert
+          class="settings-inline-alert"
+          type="info"
+          title="代理仅用于 TMDB 和来源抓取，不影响 qBittorrent、NAS 115、入库和本地文件操作。"
+          show-icon
+          :closable="false"
+        />
+        <el-form-item label="代理类型">
+          <el-radio-group v-model="form.metadata_proxy_type">
+            <el-radio-button label="none">关闭</el-radio-button>
+            <el-radio-button label="http">HTTP</el-radio-button>
+            <el-radio-button label="socks5">SOCKS5</el-radio-button>
+          </el-radio-group>
+        </el-form-item>
+        <div class="field-grid">
+          <el-form-item label="主机">
+            <el-input
+              v-model="form.metadata_proxy_host"
+              :disabled="form.metadata_proxy_type === 'none'"
+              placeholder="127.0.0.1"
+            />
+          </el-form-item>
+          <el-form-item label="端口">
+            <el-input-number
+              v-model="form.metadata_proxy_port"
+              :disabled="form.metadata_proxy_type === 'none'"
+              :min="1"
+              :max="65535"
+              :step="1"
+            />
+          </el-form-item>
+        </div>
+        <div class="field-grid">
+          <el-form-item label="用户名">
+            <el-input
+              v-model="form.metadata_proxy_username"
+              :disabled="form.metadata_proxy_type === 'none'"
+              autocomplete="username"
+              placeholder="可留空"
+            />
+          </el-form-item>
+          <el-form-item label="密码">
+            <el-input
+              v-model="form.metadata_proxy_password"
+              :disabled="form.metadata_proxy_type === 'none'"
+              type="password"
+              show-password
+              autocomplete="new-password"
+              placeholder="可留空；已保存的密码不会显示"
+            />
+          </el-form-item>
+        </div>
+        <el-tag
+          size="small"
+          :type="savedTagType(settingsStore.settings?.has_metadata_proxy_password)"
+        >
+          {{
+            savedLabel(
+              settingsStore.settings?.has_metadata_proxy_password,
+              '已保存代理密码',
+              '未填写代理密码'
+            )
+          }}
+        </el-tag>
       </el-card>
 
       <el-card class="settings-section">

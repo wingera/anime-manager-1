@@ -19,6 +19,11 @@ class SettingsResponse(BaseModel):
     media_library_dir: str
     matching_threshold: int
     tmdb_include_adult: bool
+    metadata_proxy_type: str
+    metadata_proxy_host: str | None
+    metadata_proxy_port: int | None
+    metadata_proxy_username: str | None
+    has_metadata_proxy_password: bool
     created_at: datetime
     updated_at: datetime
 
@@ -38,6 +43,11 @@ class SettingsUpdateRequest(BaseModel):
     media_library_dir: str | None = None
     matching_threshold: int | None = Field(default=None, ge=0, le=100)
     tmdb_include_adult: bool | None = None
+    metadata_proxy_type: str | None = Field(default=None, pattern="^(none|http|socks5)$")
+    metadata_proxy_host: str | None = None
+    metadata_proxy_port: int | None = Field(default=None, ge=1, le=65535)
+    metadata_proxy_username: str | None = None
+    metadata_proxy_password: str | None = None
 
 
 class ConnectionTestResponse(BaseModel):

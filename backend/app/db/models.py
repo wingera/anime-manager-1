@@ -131,6 +131,11 @@ class AppSettings(Base):
     media_library_dir: Mapped[str] = mapped_column(Text, default="/media", nullable=False)
     matching_threshold: Mapped[int] = mapped_column(Integer, default=85, nullable=False)
     tmdb_include_adult: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    metadata_proxy_type: Mapped[str] = mapped_column(String(20), default="none", nullable=False)
+    metadata_proxy_host: Mapped[str | None] = mapped_column(Text, nullable=True)
+    metadata_proxy_port: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    metadata_proxy_username: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    metadata_proxy_password: Mapped[str | None] = mapped_column(Text, nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, nullable=False)
     updated_at: Mapped[datetime] = mapped_column(
         DateTime,

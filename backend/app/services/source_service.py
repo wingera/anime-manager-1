@@ -18,7 +18,9 @@ from app.schemas.sources import (
     SourceSiteCreate,
     SourceSiteUpdate,
 )
+from app.services.settings_service import get_or_create_settings
 from app.utils.info_hash import build_magnet_uri, find_info_hashes, normalize_info_hash
+from app.utils.metadata_proxy import build_metadata_proxy_url
 
 SOURCE_TEST_ERROR = "来源测试失败，请检查地址是否可访问"
 DETAIL_PAGE_FETCH_FAILED = "详情页读取失败，请稍后重试"
@@ -493,15 +495,28 @@ def _build_warning_message(source: SourceSite, contexts: list[HtmlPreviewContext
     return None
 
 
-def _fetch_source_url(url: str, *, attempts: int = 1) -> httpx.Response:
+def _fetch_source_url(
+    url: str,
+    *,
+    attempts: int = 1,
+    proxy_url: str | None = None,
+) -> httpx.Response:
     normalized_attempts = max(1, attempts)
     for attempt in range(1, normalized_attempts + 1):
         try:
-            response = httpx.get(
-                url,
-                timeout=SOURCE_FETCH_TIMEOUT_SECONDS,
-                follow_redirects=True,
-            )
+            if proxy_url:
+                response = httpx.get(
+                    url,
+                    timeout=SOURCE_FETCH_TIMEOUT_SECONDS,
+                    follow_redirects=True,
+                    proxy=proxy_url,
+                )
+            else:
+                response = httpx.get(
+                    url,
+                    timeout=SOURCE_FETCH_TIMEOUT_SECONDS,
+                    follow_redirects=True,
+                )
             response.raise_for_status()
             return response
         except httpx.TransportError:
@@ -887,10 +902,11 @@ def preview_single_detail_page(
     detail_url: str,
     title: str | None = None,
     page_number: int = 1,
+    proxy_url: str | None = None,
 ) -> tuple[int, list[SourcePreviewItem], SourceScanFailure | None]:
     normalized_url = normalize_retry_detail_url(source, detail_url)
     try:
-        response = _fetch_source_url(normalized_url)
+        response = _fetch_source_url(normalized_url, proxy_url=proxy_url)
     except httpx.HTTPError:
         return (
             0,
@@ -917,6 +933,7 @@ def preview_source_items_with_detail_pages(
     page_number: int = 1,
     page_url: str | None = None,
     pagination: SourcePagination | None = None,
+    proxy_url: str | None = None,
 ) -> tuple[
     int,
     list[SourcePreviewItem],
@@ -942,7 +959,7 @@ def preview_source_items_with_detail_pages(
 
     for candidate in _detail_candidates_from_context(source, list_context):
         try:
-            response = _fetch_source_url(candidate.url)
+            response = _fetch_source_url(candidate.url, proxy_url=proxy_url)
         except httpx.HTTPError:
             failures.append(
                 SourceScanFailure(
@@ -983,8 +1000,13 @@ def test_source(
     SourcePagination,
     list[SourceScanFailure],
 ]:
+    proxy_url = build_metadata_proxy_url(get_or_create_settings(db))
     try:
-        response = _fetch_source_url(source.url, attempts=SOURCE_FETCH_ATTEMPTS)
+        response = _fetch_source_url(
+            source.url,
+            attempts=SOURCE_FETCH_ATTEMPTS,
+            proxy_url=proxy_url,
+        )
     except httpx.HTTPError as exc:
         raise SourceTestError(SOURCE_TEST_ERROR) from exc
 
@@ -997,7 +1019,11 @@ def test_source(
         if selected_page_url is None:
             raise SourceTestError("未找到指定页码，请先确认来源分页是否可识别")
         try:
-            selected_response = _fetch_source_url(selected_page_url, attempts=SOURCE_FETCH_ATTEMPTS)
+            selected_response = _fetch_source_url(
+                selected_page_url,
+                attempts=SOURCE_FETCH_ATTEMPTS,
+                proxy_url=proxy_url,
+            )
         except httpx.HTTPError as exc:
             raise SourceTestError(SOURCE_TEST_ERROR) from exc
         page_url = selected_page_url
@@ -1013,6 +1039,7 @@ def test_source(
             page_number=page_number,
             page_url=page_url,
             pagination=pagination,
+            proxy_url=proxy_url,
         )
     found_count, items, warning_message, resolved_pagination = preview_source_items(
         source,

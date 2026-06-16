@@ -10,6 +10,7 @@ from app.integrations.tmdb import test_tmdb_connection
 from app.schemas.settings import ConnectionTestResponse, SettingsResponse, SettingsUpdateRequest
 from app.services.log_service import write_operation_log
 from app.services.settings_service import get_or_create_settings, to_response, update_settings
+from app.utils.metadata_proxy import build_metadata_proxy_url
 from app.utils.secrets import decrypt_secret
 
 router = APIRouter(prefix="/api/settings", tags=["系统设置"])
@@ -43,6 +44,7 @@ def test_tmdb(db: DbSession) -> ConnectionTestResponse:
     return test_tmdb_connection(
         decrypt_secret(settings.tmdb_api_key),
         settings.tmdb_language,
+        build_metadata_proxy_url(settings),
     )
 
 

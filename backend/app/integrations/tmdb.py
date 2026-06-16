@@ -6,6 +6,7 @@ import httpx
 from app.schemas.settings import ConnectionTestResponse
 
 TMDB_SEARCH_ERROR = "TMDB 搜索失败，请检查网络或 API 密钥"
+QueryParam = str | int | float | bool | None
 
 
 class TmdbSearchError(RuntimeError):
@@ -22,16 +23,21 @@ class TmdbTvResult:
     poster_path: str | None
 
 
-def test_tmdb_connection(api_key: str | None, language: str) -> ConnectionTestResponse:
+def test_tmdb_connection(
+    api_key: str | None,
+    language: str,
+    proxy_url: str | None = None,
+) -> ConnectionTestResponse:
     if not api_key:
         return ConnectionTestResponse(success=False, message="请先填写 TMDB API 密钥")
 
     try:
-        response = httpx.get(
-            "https://api.themoviedb.org/3/configuration",
-            params={"api_key": api_key, "language": language},
-            timeout=10.0,
-        )
+        request_url = "https://api.themoviedb.org/3/configuration"
+        params = {"api_key": api_key, "language": language}
+        if proxy_url:
+            response = httpx.get(request_url, params=params, timeout=10.0, proxy=proxy_url)
+        else:
+            response = httpx.get(request_url, params=params, timeout=10.0)
     except httpx.RequestError:
         return ConnectionTestResponse(success=False, message="TMDB 连接失败：网络异常")
 
@@ -47,19 +53,21 @@ def search_tv(
     region: str,
     query: str,
     include_adult: bool,
+    proxy_url: str | None = None,
 ) -> list[TmdbTvResult]:
     try:
-        response = httpx.get(
-            "https://api.themoviedb.org/3/search/tv",
-            params={
-                "api_key": api_key,
-                "language": language,
-                "region": region,
-                "query": query,
-                "include_adult": include_adult,
-            },
-            timeout=10.0,
-        )
+        request_url = "https://api.themoviedb.org/3/search/tv"
+        params: dict[str, QueryParam] = {
+            "api_key": api_key,
+            "language": language,
+            "region": region,
+            "query": query,
+            "include_adult": include_adult,
+        }
+        if proxy_url:
+            response = httpx.get(request_url, params=params, timeout=10.0, proxy=proxy_url)
+        else:
+            response = httpx.get(request_url, params=params, timeout=10.0)
         response.raise_for_status()
         payload: Any = response.json()
     except (httpx.HTTPError, ValueError) as exc:

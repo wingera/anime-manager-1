@@ -36,8 +36,8 @@ const previewSourceName = computed(() => {
   const source = sourcesStore.sources.find((item) => item.id === sourcesStore.previewSourceId)
   return source?.name ?? '当前来源'
 })
-const previewPaginationPages = computed(() => sourcesStore.previewPagination?.pages ?? [])
 const previewTotalPages = computed(() => sourcesStore.previewPagination?.total_pages ?? 1)
+const previewPageInputMax = computed(() => Math.max(1, previewTotalPages.value))
 const hasMultiplePreviewPages = computed(() => previewTotalPages.value > 1)
 
 function resetForm(): void {
@@ -285,25 +285,14 @@ onMounted(() => {
         </div>
         <div class="preview-actions">
           <div class="page-scan-control">
-            <el-select
-              v-if="previewPaginationPages.length > 0"
-              v-model="selectedPageNumber"
-              class="page-select"
-              placeholder="选择页码"
-              :disabled="sourcesStore.testing"
-            >
-              <el-option
-                v-for="page in previewPaginationPages"
-                :key="page.page_number"
-                :label="`第 ${page.page_number} 页`"
-                :value="page.page_number"
-              />
-            </el-select>
             <el-input-number
-              v-else
               v-model="selectedPageNumber"
+              class="page-number-input"
               :min="1"
-              :max="previewTotalPages"
+              :max="previewPageInputMax"
+              :step="1"
+              :precision="0"
+              controls-position="right"
               :disabled="sourcesStore.testing"
             />
             <el-button
@@ -610,7 +599,7 @@ onMounted(() => {
   gap: 8px;
 }
 
-.page-select {
+.page-number-input {
   width: 132px;
 }
 
@@ -711,7 +700,7 @@ onMounted(() => {
   }
 
   .page-scan-control,
-  .page-select,
+  .page-number-input,
   .page-scan-control .el-button {
     width: 100%;
   }

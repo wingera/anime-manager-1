@@ -118,6 +118,52 @@ def test_tmdb_search_passes_include_adult_setting(
     assert captured_params["include_adult"] is True
 
 
+def test_tmdb_search_uses_metadata_proxy_when_configured(
+    client: TestClient,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    item_id = _create_source_item(client)
+    settings_response = client.put(
+        "/api/settings",
+        json={
+            "tmdb_api_key": "secret-tmdb-key",
+            "metadata_proxy_type": "http",
+            "metadata_proxy_host": "proxy.example.test",
+            "metadata_proxy_port": 8080,
+            "metadata_proxy_username": "proxy-user",
+            "metadata_proxy_password": "proxy-secret",
+        },
+    )
+    assert settings_response.status_code == 200
+    captured_proxy: dict[str, str] = {}
+
+    class FakeResponse:
+        def raise_for_status(self) -> None:
+            return None
+
+        def json(self) -> dict[str, object]:
+            return {"results": []}
+
+    def fake_get(
+        url: str,
+        *,
+        params: dict[str, object],
+        timeout: float,
+        proxy: str,
+    ) -> FakeResponse:
+        assert url == "https://api.themoviedb.org/3/search/tv"
+        assert timeout == 10.0
+        captured_proxy["value"] = proxy
+        return FakeResponse()
+
+    monkeypatch.setattr("app.integrations.tmdb.httpx.get", fake_get)
+
+    response = client.post(f"/api/source-items/{item_id}/tmdb/search")
+
+    assert response.status_code == 200
+    assert captured_proxy["value"] == "http://proxy-user:proxy-secret@proxy.example.test:8080"
+
+
 def test_tmdb_search_uses_short_backup_queries_and_deduplicates_results(
     client: TestClient,
     monkeypatch: pytest.MonkeyPatch,

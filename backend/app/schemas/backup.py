@@ -20,6 +20,11 @@ class BackupSettings(BaseModel):
     download_dir: str = Field(min_length=1)
     media_library_dir: str = Field(min_length=1)
     matching_threshold: int = Field(ge=0, le=100)
+    metadata_proxy_type: str = Field(default="none", pattern="^(none|http|socks5)$")
+    metadata_proxy_host: str | None = None
+    metadata_proxy_port: int | None = Field(default=None, ge=1, le=65535)
+    metadata_proxy_username: str | None = None
+    has_metadata_proxy_password: bool = False
 
 
 class BackupSource(BaseModel):

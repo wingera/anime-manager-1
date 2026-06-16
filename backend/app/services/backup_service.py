@@ -39,6 +39,11 @@ def export_backup(db: Session) -> BackupExportResponse:
             download_dir=settings.download_dir,
             media_library_dir=settings.media_library_dir,
             matching_threshold=settings.matching_threshold,
+            metadata_proxy_type=settings.metadata_proxy_type,
+            metadata_proxy_host=settings.metadata_proxy_host,
+            metadata_proxy_port=settings.metadata_proxy_port,
+            metadata_proxy_username=settings.metadata_proxy_username,
+            has_metadata_proxy_password=bool(settings.metadata_proxy_password),
         ),
         sources=[
             BackupSource(
@@ -71,6 +76,10 @@ def import_backup(db: Session, payload: BackupImportRequest) -> None:
                 download_dir=payload.settings.download_dir,
                 media_library_dir=payload.settings.media_library_dir,
                 matching_threshold=payload.settings.matching_threshold,
+                metadata_proxy_type=payload.settings.metadata_proxy_type,
+                metadata_proxy_host=payload.settings.metadata_proxy_host,
+                metadata_proxy_port=payload.settings.metadata_proxy_port,
+                metadata_proxy_username=payload.settings.metadata_proxy_username,
             ),
         )
 

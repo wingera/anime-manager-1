@@ -175,6 +175,57 @@ def test_source_test_returns_preview_without_creating_items(
     assert db_session.scalars(select(SourceItem)).all() == []
 
 
+def test_source_test_uses_metadata_proxy_when_configured(
+    client: TestClient,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    client.put(
+        "/api/settings",
+        json={
+            "metadata_proxy_type": "socks5",
+            "metadata_proxy_host": "127.0.0.1",
+            "metadata_proxy_port": 1080,
+        },
+    )
+    create_response = client.post(
+        "/api/sources",
+        json={
+            "name": "测试来源",
+            "url": "https://example.test/list",
+            "source_type": "webpage",
+            "enabled": False,
+        },
+    )
+    source_id = create_response.json()["source"]["id"]
+    captured_proxy: dict[str, str] = {}
+
+    class FakeResponse:
+        text = "<a href='/item'>测试标题 abcdef1234567890abcdef1234567890abcdef12</a>"
+
+        def raise_for_status(self) -> None:
+            return None
+
+    def fake_get(
+        url: str,
+        *,
+        timeout: float,
+        follow_redirects: bool,
+        proxy: str,
+    ) -> FakeResponse:
+        assert url == "https://example.test/list"
+        assert timeout > 0
+        assert follow_redirects is True
+        captured_proxy["value"] = proxy
+        return FakeResponse()
+
+    monkeypatch.setattr("app.services.source_service.httpx.get", fake_get)
+
+    response = client.post(f"/api/sources/{source_id}/test")
+
+    assert response.status_code == 200
+    assert captured_proxy["value"] == "socks5://127.0.0.1:1080"
+
+
 def test_source_test_retries_transient_fetch_failure_without_creating_items(
     client: TestClient,
     db_session: Session,

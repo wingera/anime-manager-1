@@ -22,13 +22,20 @@ def update_settings(db: Session, payload: SettingsUpdateRequest) -> AppSettings:
     settings = get_or_create_settings(db)
     data = payload.model_dump(exclude_unset=True)
 
+    secret_fields = {
+        "tmdb_api_key",
+        "qbittorrent_password",
+        "cloud115_service_token",
+        "metadata_proxy_password",
+    }
+
     for field, value in data.items():
-        if field in {"tmdb_api_key", "qbittorrent_password", "cloud115_service_token"}:
+        if field in secret_fields:
             setattr(settings, field, encrypt_secret(None if value == "" else value))
             continue
         setattr(settings, field, value)
 
-    for field in ("tmdb_api_key", "qbittorrent_password", "cloud115_service_token"):
+    for field in secret_fields:
         current_value = getattr(settings, field)
         if current_value and not is_encrypted_secret(current_value):
             setattr(settings, field, encrypt_secret(decrypt_secret(current_value)))
@@ -56,6 +63,11 @@ def to_response(settings: AppSettings) -> SettingsResponse:
         media_library_dir=settings.media_library_dir,
         matching_threshold=settings.matching_threshold,
         tmdb_include_adult=settings.tmdb_include_adult,
+        metadata_proxy_type=settings.metadata_proxy_type,
+        metadata_proxy_host=settings.metadata_proxy_host,
+        metadata_proxy_port=settings.metadata_proxy_port,
+        metadata_proxy_username=settings.metadata_proxy_username,
+        has_metadata_proxy_password=bool(settings.metadata_proxy_password),
         created_at=settings.created_at,
         updated_at=settings.updated_at,
     )
